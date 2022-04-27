@@ -14,7 +14,7 @@
 /lab?/
 /sol?/
 /myapi.key
-./idea
-./vscode
-./misc.xml
-./vsc.xml
+/.idea
+/.vscode
+/.misc.xml
+/.vsc.xml
