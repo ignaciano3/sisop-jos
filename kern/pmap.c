@@ -262,8 +262,16 @@ page_init(void)
 	// Change the code to reflect this.
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
+	physaddr_t kernel_end = PADDR(boot_alloc(0));
+
 	size_t i;
 	for (i = 0; i < npages; i++) {
+		physaddr_t phys_address = PADDR(&pages[i]);
+		if (i == 0 ||
+		    (phys_address >= IOPHYSMEM && phys_address < EXTPHYSMEM) ||
+		    (EXTPHYSMEM <= phys_address && phys_address < kernel_end)) {
+			continue;
+		}
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
