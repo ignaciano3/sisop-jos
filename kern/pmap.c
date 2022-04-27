@@ -268,8 +268,7 @@ page_init(void)
 	for (i = 0; i < npages; i++) {
 		physaddr_t phys_address = PADDR(&pages[i]);
 		if (i == 0 ||
-		    (phys_address >= IOPHYSMEM && phys_address < EXTPHYSMEM) ||
-		    (EXTPHYSMEM <= phys_address && phys_address < kernel_end)) {
+		    (phys_address >= IOPHYSMEM && phys_address < kernel_end)) {
 			continue;
 		}
 		pages[i].pp_ref = 0;
