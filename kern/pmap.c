@@ -266,7 +266,7 @@ page_init(void)
 
 	size_t i;
 	for (i = 0; i < npages; i++) {
-		physaddr_t phys_address = PADDR(&pages[i]);
+		physaddr_t phys_address = page2pa(&pages[i]);
 		if (i == 0 ||
 		    (phys_address >= IOPHYSMEM && phys_address < kernel_end)) {
 			continue;
