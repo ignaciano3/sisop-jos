@@ -345,7 +345,29 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	return NULL;
+	uint16_t pgdir_index = PDX(va);
+
+	// Check if the page directory entry is present
+	if (!(pgdir[pgdir_index] & PTE_P)) {
+		// If the page directory entry is not present,
+		// and we are not creating a new page table
+		if (!create) {
+			return NULL;
+		}
+		// Allocate a new page table
+		struct PageInfo *pp = page_alloc(ALLOC_ZERO);
+		if (!pp) {
+			return NULL;
+		}
+		pp->pp_ref++;
+		// Add the new page table to the page directory as they
+		// store physical addresses
+		pgdir[pgdir_index] = page2pa(pp) | PTE_P | PTE_W | PTE_U;
+	}
+	pte_t *pg_table = KADDR(PTE_ADDR(pgdir[pgdir_index]));
+	uint16_t pg_table_index = PTX(va);
+
+	return pg_table + pg_table_index;
 }
 
 //
@@ -394,6 +416,18 @@ int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
 	// Fill this function in
+	pte_t *pte = pgdir_walk(pgdir, va, 1);
+	if (!pte) {
+		return -E_NO_MEM;
+	}
+	// Check if the page is already mapped
+	if (*pte & PTE_P) {
+		page_remove(pgdir, va);
+	}
+	// Add the page to the page table
+	*pte = page2pa(pp) | perm | PTE_P;
+	pp->pp_ref++;
+
 	return 0;
 }
 
@@ -412,7 +446,17 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
-	return NULL;
+	pte_t *pte = pgdir_walk(pgdir, va, 0);
+
+	// Check if the page table entry is present
+	if (!pte || !(*pte & PTE_P)) {
+		return NULL;
+	}
+	if (pte_store) {
+		*pte_store = pte;
+	}
+
+	return pa2page(PTE_ADDR(*pte));
 }
 
 //
@@ -434,6 +478,16 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
+	pte_t *pte;
+	struct PageInfo *page = page_lookup(pgdir, va, &pte);
+
+	if (!page) {
+		return;
+	}
+
+	page_decref(page);
+	*pte = 0;
+	tlb_invalidate(pgdir, va);
 }
 
 //
