@@ -437,12 +437,12 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 		return -E_NO_MEM;
 	}
 	// Check if the page is already mapped
+	pp->pp_ref++;
 	if (*pte & PTE_P) {
 		page_remove(pgdir, va);
 	}
 	// Add the page to the page table
 	*pte = page2pa(pp) | perm | PTE_P;
-	pp->pp_ref++;
 
 	return 0;
 }
