@@ -65,12 +65,6 @@ Value returned is $1 = (void *) 0xf0115000
 ```
 
 
-page_alloc
-----------
-
-...
-
-
 map_region_large
 ----------------
 
