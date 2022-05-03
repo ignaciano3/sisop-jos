@@ -408,6 +408,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
+#ifndef TP1_PSE
 	// Fill this function in
 	for (uint32_t offset = 0; offset < size; offset += PGSIZE) {
 		pte_t *pte = pgdir_walk(pgdir,
@@ -415,6 +416,21 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 		                        1);  // create if not created
 		*pte = (pa + offset) | perm | PTE_P;
 	}
+#else
+	if (!((va % PTSIZE == 0) && (pa % PTSIZE == 0) && (size >= PTSIZE))) {
+		for (uint32_t offset = 0; offset < size; offset += PGSIZE) {
+			pte_t *pte = pgdir_walk(pgdir,
+			                        (void *) (va + offset),
+			                        1);  // create if not created
+			*pte = (pa + offset) | perm | PTE_P;
+		}
+		return;
+	}
+	for (uint32_t offset = 0; offset <= size; offset += PTSIZE) {
+		pde_t *pde = pgdir + PDX(va + offset);
+		*pde = (pa + offset) | perm | PTE_P | PTE_PS;
+	}
+#endif
 }
 
 //
