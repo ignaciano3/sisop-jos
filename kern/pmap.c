@@ -408,48 +408,29 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-
-	int n_4mb_pages;
-	for (int i = 0; true; i++) {
-		if (i * PTSIZE > size) {
-			n_4mb_pages = i - 1;
-			break;
+	int n_4mb_pages = 0;
+#ifdef TP1_PSE
+	if ((va % PTSIZE == 0) && (pa % PTSIZE == 0)) {
+		//va and pa aligned to 4mb
+		for (int i = 0; true; i++) {
+			if (i * PTSIZE > size) {
+				n_4mb_pages = i - 1;
+				break;
+			}
+		}
+		for (int i = 0; i <= n_4mb_pages; i++) {
+			// Add 4 MB pages (pde)
+			pde_t *pde = pgdir + PDX(va + i * PTSIZE);
+			*pde = (pa + i * PTSIZE) | perm | PTE_P | PTE_PS;
 		}
 	}
-	for (int i = 0; i < n_4mb_pages; i++) {
-		// Add 4 MB pages (pde)
-		pde_t *pde = pgdir + PDX(va + i * PTSIZE);
-		*pde = (pa + i * PTSIZE) | perm | PTE_P | PTE_PS;
-	}
-	for (uint32_t offset = n_4mb_pages * PTSIZE; n_4mb_pages * PTSIZE + offset < size; offset += PGSIZE) {
+#endif
+	for (uint32_t offset = n_4mb_pages * PTSIZE; 
+		n_4mb_pages * PTSIZE + offset < size; offset += PGSIZE) {
 		// Add rest pages (pte)
 		pte_t *pte = pgdir_walk(pgdir, (void*) (va + offset), 1);
 		*pte = (pa + offset) | perm | PTE_P;
 	}
-
-//#ifndef TP1_PSE
-//	// Fill this function in
-//	for (uint32_t offset = 0; offset < size; offset += PGSIZE) {
-//		pte_t *pte = pgdir_walk(pgdir,
-//		                        (void *) (va + offset),
-//		                        1);  // create if not created
-//		*pte = (pa + offset) | perm | PTE_P;
-//	}
-//#else
-//	if (!((va % PTSIZE == 0) && (pa % PTSIZE == 0) && (size >= PTSIZE))) {
-//		for (uint32_t offset = 0; offset < size; offset += PGSIZE) {
-//			pte_t *pte = pgdir_walk(pgdir,
-//			                        (void *) (va + offset),
-//			                        1);  // create if not created
-//			*pte = (pa + offset) | perm | PTE_P;
-//		}
-//		return;
-//	}
-//	for (uint32_t offset = 0; offset <= size; offset += PTSIZE) {
-//		pde_t *pde = pgdir + PDX(va + offset);
-//		*pde = (pa + offset) | perm | PTE_P | PTE_PS;
-//	}
-//#endif
 }
 
 //
