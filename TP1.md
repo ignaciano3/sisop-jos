@@ -66,19 +66,28 @@ Value returned is $1 = (void *) 0xf0115000
 
 
 map_region_large
+----------------
+
 **Modificar la función boot_map_region() para que use page directory entries de 4 MiB cuando sea apropiado. (En particular, sólo se pueden usar en direcciones alineadas a 22 bits.)**
 **¿cuánta memoria se ahorró de este modo? (en KiB)**
 Para responder esto, primero hay que ver qué es lo que pasaba cuando solo se usaban páginas de 4KiB. La función boot_map_region() hace por cada bloque de 4KiB lo siguiente: llama a pgdir_walk (creando una pageTable si es que no había sido creada ya), y en la posición de la pageTable obtenida se escribe la dirección física correspondiente junto con los permisos.
 
-Esto significa que por cada bloque de 4KiB virtuales que se quieren vincular con el respectivo bloque de memoria física, se necesita una PageTable que ocupa exactamente 4KiB. Por lo tanto, memoria total usada: (size / 4KiB) * 4KiB = size. Esto es, si queremos asociar 64KiB de memoria virtual con 64KiB de memoria física, se necesitan 64KiB.
+Ahora se analiza el mejor caso posible en cuanto a la cantidad de memoria utilizada, esto es, el escenario en donde se utiliza menos memoria. Dado una memoria virtual de 32 bits, se sabe que los primeros 10 bits son el offset del PageDir de donde se saca la PageTable, y los siguientes 10 bits son el offset de dicha PageTable. Se supone ahora que estos segundos 10 bits son todos ceros, es decir que no hay offset en la PageTable. En la primera iteración se guarda en esa posición la memoria física correspondiente con sus flags.
+
+Para la siguiente iteración, se pretende vincular el siguiente bloque de 4KiB, por lo tanto se tiene va + 4KiB. 4KiB == 4 * 2^10 == 2^12 == 0x00001000. Como solo importan los segundos 10 bits, se propone va = 0xF0000000 (se recuerda que los segundos 10 bits eran 0, y que la dirección está alineada a 4KiB). Se tiene entonces para la siguiente iteración va + 4KiB = 0x00001000. Como los primeros 10 bits son iguales al anterior, se accede a la misma PageTable, esta vez con un offset de 1 posición. La siguiente iteración se tendrá un offset de 2, y así 1024 veces hasta completar la PageTable. A la siguiente dirección después de eso, se tendrá que usar una PageTable diferente.
+
+Se concluye entonces que en el caso más ahorrativo de memoria se usa una PageTable de 4KiB por cada 1024 páginas de 4KiB, o equivalentemente, una PageTable de 4KiB por cada 4MiB.
+
+Esto significa que por cada bloque de 4MB virtuales que se quieren vincular con el respectivo bloque de memoria física, se necesita una PageTable que ocupa exactamente 4KiB. Por lo tanto, memoria total mínima usada: (RoundDown(size, 4MB) / 4MB) * 4KiB + 4KiB. Esto es, si queremos asociar por ejemplo 8MB + 8KiB de memoria virtual con se necesitan por lo menos 2 * 4KiB + 4KiB = 12KiB.
 
 Ahora, se procede a explicar lo que pasa con las páginas largas. Por cada bloque de 4MB, se carga en una fila del PageDirectory la dirección física del bloque de 4MB correspondiente. Esto significa que no hay un intermediario entre la memoria física y el PageDirectory, como si lo había con las páginas de tamaño 4KiB.
 
-Por lo tanto, por cada bloque de memoria virtual de 4MB (equivalente a 1024 bloques de 4KiB) que se asocia al bloque físico mediante páginas largas, se ahorran 4MB de memoria.
+Por lo tanto, por cada bloque de memoria virtual de 4MB (equivalente a 1024 bloques de 4KiB) que se asocia al bloque físico mediante páginas largas, se ahorran por lo menos 4KiB de memoria. 
+
+La única limitante es que la dirección virtual tiene que ser múltiplo de 22 bits
 
 **¿es una cantidad fija, o depende de la memoria física de la computadora?**
 
-----------------
-
+Retomando el punto anterior, la dirección virtual a una dirección que está en una página larga se descompone de la siguiente manera: los primeros 10 bits es el offset en la PageDir. De ahí, los primeros 20 bits dan la dirección física en memoria. Los 22 bits restantes se usan como offset a partir de dicha memoria física. Como 22 bits == 4MB, para que sea una página larga válida es necesario que la memoria física también esté alineada a 22 bits.
 ...
 
