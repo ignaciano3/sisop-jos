@@ -43,8 +43,8 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 Por lo tanto, el resultado de `boot_alloc()` será `0xf0115000`.
 
-Una sesión de GDB en la que, poniendo un breakpoint en la función `boot_alloc()`, se muestre el valor devuelto en esa primera llamada,
-usando el comando GDB `finish`.
+**Una sesión de GDB en la que, poniendo un breakpoint en la función `boot_alloc()`, se muestre el valor devuelto en esa primera llamada,
+usando el comando GDB `finish`.**
 
 ```bash
 (gdb) b boot_alloc
@@ -66,6 +66,18 @@ Value returned is $1 = (void *) 0xf0115000
 
 
 map_region_large
+**Modificar la función boot_map_region() para que use page directory entries de 4 MiB cuando sea apropiado. (En particular, sólo se pueden usar en direcciones alineadas a 22 bits.)**
+**¿cuánta memoria se ahorró de este modo? (en KiB)**
+Para responder esto, primero hay que ver qué es lo que pasaba cuando solo se usaban páginas de 4KiB. La función boot_map_region() hace por cada bloque de 4KiB lo siguiente: llama a pgdir_walk (creando una pageTable si es que no había sido creada ya), y en la posición de la pageTable obtenida se escribe la dirección física correspondiente junto con los permisos.
+
+Esto significa que por cada bloque de 4KiB virtuales que se quieren vincular con el respectivo bloque de memoria física, se necesita una PageTable que ocupa exactamente 4KiB. Por lo tanto, memoria total usada: (size / 4KiB) * 4KiB = size. Esto es, si queremos asociar 64KiB de memoria virtual con 64KiB de memoria física, se necesitan 64KiB.
+
+Ahora, se procede a explicar lo que pasa con las páginas largas. Por cada bloque de 4MB, se carga en una fila del PageDirectory la dirección física del bloque de 4MB correspondiente. Esto significa que no hay un intermediario entre la memoria física y el PageDirectory, como si lo había con las páginas de tamaño 4KiB.
+
+Por lo tanto, por cada bloque de memoria virtual de 4MB (equivalente a 1024 bloques de 4KiB) que se asocia al bloque físico mediante páginas largas, se ahorran 4MB de memoria.
+
+**¿es una cantidad fija, o depende de la memoria física de la computadora?**
+
 ----------------
 
 ...
