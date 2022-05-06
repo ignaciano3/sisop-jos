@@ -88,6 +88,6 @@ La única limitante es que la dirección virtual tiene que ser múltiplo de 22 b
 
 **¿es una cantidad fija, o depende de la memoria física de la computadora?**
 
-Retomando el punto anterior, la dirección virtual a una dirección que está en una página larga se descompone de la siguiente manera: los primeros 10 bits es el offset en la PageDir. De ahí, los primeros 20 bits dan la dirección física en memoria. Los 22 bits restantes se usan como offset a partir de dicha memoria física. Como 22 bits == 4MB, para que sea una página larga válida es necesario que la memoria física también esté alineada a 22 bits.
+Retomando el punto anterior, la dirección virtual a una dirección que está en una página larga se descompone de la siguiente manera: los primeros 10 bits es el offset en la PageDir. De ahí, los primeros 20 bits dan la dirección física en memoria. Los 22 bits restantes se usan como offset a partir de dicha memoria física. Como 22 bits == 4MB, para que sea una página larga válida es necesario que la memoria física también esté alineada a 22 bits. Como en tiempo de ejecución este puede ser que no siempre sea el caso, se concluye que no siempre se ahorra la misma cantidad de memoria, sobretodo cuando se tiene en cuenta el mismo programa ejecutándose en computadoras distintas.
 ...
 
