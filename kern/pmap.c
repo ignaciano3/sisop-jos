@@ -411,7 +411,7 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 	int n_4mb_pages = 0;
 #ifdef TP1_PSE
 	if ((va % PTSIZE == 0) && (pa % PTSIZE == 0)) {
-		//va and pa aligned to 4mb
+		// va and pa aligned to 4mb
 		for (int i = 0; true; i++) {
 			if (i * PTSIZE > size) {
 				n_4mb_pages = i - 1;
@@ -425,10 +425,11 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 		}
 	}
 #endif
-	for (uint32_t offset = n_4mb_pages * PTSIZE; 
-		n_4mb_pages * PTSIZE + offset < size; offset += PGSIZE) {
+	for (uint32_t offset = n_4mb_pages * PTSIZE;
+	     n_4mb_pages * PTSIZE + offset < size;
+	     offset += PGSIZE) {
 		// Add rest pages (pte)
-		pte_t *pte = pgdir_walk(pgdir, (void*) (va + offset), 1);
+		pte_t *pte = pgdir_walk(pgdir, (void *) (va + offset), 1);
 		*pte = (pa + offset) | perm | PTE_P;
 	}
 }
