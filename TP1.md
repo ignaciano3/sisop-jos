@@ -8,7 +8,7 @@ boot_alloc_pos
 Se puede calcular a partir del binario compilado (`obj/kern/kernel`), 
 usando los comandos `readelf` y/o `nm` y operaciones matemáticas.**
 
-Si ejecutamos tanto `readelf -s obj/kern/kernel | grep end` como `nm obj/kern/kernel | grep end` vemos la siguiente salida 
+Si se ejecuta tanto `readelf -s obj/kern/kernel | grep end` como `nm obj/kern/kernel | grep end` vemos la siguiente salida 
 
 ```bash
 $ readelf -s obj/kern/kernel | grep end`
@@ -20,7 +20,7 @@ Por lo tanto,  `end` posee la dirección virtual `0xf0114950` en la primera ejec
 función `nextfree` es `NULL`, entonces se redondea la dirección virtual de `end` a 4096 (`PGSIZE`) llamando a `ROUNDUP(0xf0114950, PGSIZE)`,
 y el resultado de este redondeo será el valor devuelto por `boot_alloc()`.
 Entonces, considerando que `ROUNDUP(a, n)` redondea `a` hacia arriba al múltiplo más cercano de `n` y que 0xf0114950 = 4027664720 (decimal),
-el múltiplo más cercano de 4096 será 4027666432. Si lo vemos en Python, y teniendo en cuenta la implementación de `ROUNDUP` y `ROUNDDOWN`:
+el múltiplo más cercano de 4096 será 4027666432. Se procede a mostrarlo en Python, teniendo en cuenta la implementación de `ROUNDUP` y `ROUNDDOWN`:
 
 ```python
 Python 3.8.10 (default, Mar 15 2022, 12:22:08)
@@ -43,8 +43,8 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 Por lo tanto, el resultado de `boot_alloc()` será `0xf0115000`.
 
-Una sesión de GDB en la que, poniendo un breakpoint en la función `boot_alloc()`, se muestre el valor devuelto en esa primera llamada,
-usando el comando GDB `finish`.
+**Una sesión de GDB en la que, poniendo un breakpoint en la función `boot_alloc()`, se muestre el valor devuelto en esa primera llamada,
+usando el comando GDB `finish`.**
 
 ```bash
 (gdb) b boot_alloc
@@ -68,8 +68,26 @@ Value returned is $1 = (void *) 0xf0115000
 map_region_large
 ----------------
 
-- **¿cuánta memoria se ahorró de este modo? (en KiB)?**
+**Modificar la función boot_map_region() para que use page directory entries de 4 MiB cuando sea apropiado. (En particular, sólo se pueden usar en direcciones alineadas a 22 bits.)**
+**¿cuánta memoria se ahorró de este modo? (en KiB)**
+Para responder esto, primero hay que ver qué es lo que pasaba cuando solo se usaban páginas de 4KiB. La función boot_map_region() hace por cada bloque de 4KiB lo siguiente: llama a pgdir_walk (creando una pageTable si es que no había sido creada ya), y en la posición de la pageTable obtenida se escribe la dirección física correspondiente junto con los permisos.
 
-- **¿es una cantidad fija, o depende de la memoria física de la computadora?**
+Ahora se analiza el mejor caso posible en cuanto a la cantidad de memoria utilizada, esto es, el escenario en donde se utiliza menos memoria. Dado una memoria virtual de 32 bits, se sabe que los primeros 10 bits son el offset del PageDir de donde se saca la PageTable, y los siguientes 10 bits son el offset de dicha PageTable. Se supone ahora que estos segundos 10 bits son todos ceros, es decir que no hay offset en la PageTable. En la primera iteración se guarda en esa posición la memoria física correspondiente con sus flags.
 
+Para la siguiente iteración, se pretende vincular el siguiente bloque de 4KiB, por lo tanto se tiene va + 4KiB. 4KiB == 4 * 2^10 == 2^12 == 0x00001000. Como solo importan los segundos 10 bits, se propone va = 0xF0000000 (se recuerda que los segundos 10 bits eran 0, y que la dirección está alineada a 4KiB). Se tiene entonces para la siguiente iteración va + 4KiB = 0x00001000. Como los primeros 10 bits son iguales al anterior, se accede a la misma PageTable, esta vez con un offset de 1 posición. La siguiente iteración se tendrá un offset de 2, y así 1024 veces hasta completar la PageTable. A la siguiente dirección después de eso, se tendrá que usar una PageTable diferente.
+
+Se concluye entonces que en el caso más ahorrativo de memoria se usa una PageTable de 4KiB por cada 1024 páginas de 4KiB, o equivalentemente, una PageTable de 4KiB por cada 4MiB.
+
+Esto significa que por cada bloque de 4MB virtuales que se quieren vincular con el respectivo bloque de memoria física, se necesita una PageTable que ocupa exactamente 4KiB. Por lo tanto, memoria total mínima usada: (RoundDown(size, 4MB) / 4MB) * 4KiB + 4KiB. Esto es, si queremos asociar por ejemplo 8MB + 8KiB de memoria virtual con se necesitan por lo menos 2 * 4KiB + 4KiB = 12KiB.
+
+Ahora, se procede a explicar lo que pasa con las páginas largas. Por cada bloque de 4MB, se carga en una fila del PageDirectory la dirección física del bloque de 4MB correspondiente. Esto significa que no hay un intermediario entre la memoria física y el PageDirectory, como si lo había con las páginas de tamaño 4KiB.
+
+Por lo tanto, por cada bloque de memoria virtual de 4MB (equivalente a 1024 bloques de 4KiB) que se asocia al bloque físico mediante páginas largas, se ahorran por lo menos 4KiB de memoria. 
+
+La única limitante es que la dirección virtual tiene que ser múltiplo de 22 bits
+
+**¿es una cantidad fija, o depende de la memoria física de la computadora?**
+
+Retomando el punto anterior, la dirección virtual a una dirección que está en una página larga se descompone de la siguiente manera: los primeros 10 bits es el offset en la PageDir. De ahí, los primeros 20 bits dan la dirección física en memoria. Los 22 bits restantes se usan como offset a partir de dicha memoria física. Como 22 bits == 4MB, para que sea una página larga válida es necesario que la memoria física también esté alineada a 22 bits. Como en tiempo de ejecución este puede ser que no siempre sea el caso, se concluye que no siempre se ahorra la misma cantidad de memoria.
+...
 
