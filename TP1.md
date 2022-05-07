@@ -8,7 +8,7 @@ boot_alloc_pos
 Se puede calcular a partir del binario compilado (`obj/kern/kernel`), 
 usando los comandos `readelf` y/o `nm` y operaciones matemáticas.**
 
-Si ejecutamos tanto `readelf -s obj/kern/kernel | grep end` como `nm obj/kern/kernel | grep end` vemos la siguiente salida 
+Si se ejecuta tanto `readelf -s obj/kern/kernel | grep end` como `nm obj/kern/kernel | grep end` vemos la siguiente salida 
 
 ```bash
 $ readelf -s obj/kern/kernel | grep end`
@@ -20,7 +20,7 @@ Por lo tanto,  `end` posee la dirección virtual `0xf0114950` en la primera ejec
 función `nextfree` es `NULL`, entonces se redondea la dirección virtual de `end` a 4096 (`PGSIZE`) llamando a `ROUNDUP(0xf0114950, PGSIZE)`,
 y el resultado de este redondeo será el valor devuelto por `boot_alloc()`.
 Entonces, considerando que `ROUNDUP(a, n)` redondea `a` hacia arriba al múltiplo más cercano de `n` y que 0xf0114950 = 4027664720 (decimal),
-el múltiplo más cercano de 4096 será 4027666432. Si lo vemos en Python, y teniendo en cuenta la implementación de `ROUNDUP` y `ROUNDDOWN`:
+el múltiplo más cercano de 4096 será 4027666432. Se procede a mostrarlo en Python, teniendo en cuenta la implementación de `ROUNDUP` y `ROUNDDOWN`:
 
 ```python
 Python 3.8.10 (default, Mar 15 2022, 12:22:08)
@@ -88,6 +88,6 @@ La única limitante es que la dirección virtual tiene que ser múltiplo de 22 b
 
 **¿es una cantidad fija, o depende de la memoria física de la computadora?**
 
-Retomando el punto anterior, la dirección virtual a una dirección que está en una página larga se descompone de la siguiente manera: los primeros 10 bits es el offset en la PageDir. De ahí, los primeros 20 bits dan la dirección física en memoria. Los 22 bits restantes se usan como offset a partir de dicha memoria física. Como 22 bits == 4MB, para que sea una página larga válida es necesario que la memoria física también esté alineada a 22 bits. Como en tiempo de ejecución este puede ser que no siempre sea el caso, se concluye que no siempre se ahorra la misma cantidad de memoria, sobretodo cuando se tiene en cuenta el mismo programa ejecutándose en computadoras distintas.
+Retomando el punto anterior, la dirección virtual a una dirección que está en una página larga se descompone de la siguiente manera: los primeros 10 bits es el offset en la PageDir. De ahí, los primeros 20 bits dan la dirección física en memoria. Los 22 bits restantes se usan como offset a partir de dicha memoria física. Como 22 bits == 4MB, para que sea una página larga válida es necesario que la memoria física también esté alineada a 22 bits. Como en tiempo de ejecución este puede ser que no siempre sea el caso, se concluye que no siempre se ahorra la misma cantidad de memoria.
 ...
 
