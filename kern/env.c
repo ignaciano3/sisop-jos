@@ -113,18 +113,10 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-	for (int i = 0; i < NENV - 1; i++) {
-		envs[i].env_id = 0;
-		envs[i].env_status = ENV_FREE;
-		envs[i].env_link = &envs[i + 1];
-	}
-	env_free_list = envs;
-	envs[NENV - 1].env_id = 0;
-	envs[NENV - 1].env_status = ENV_FREE;
-	envs[NENV - 1].env_link = NULL;
 
 	// Per-CPU part of the initialization
 	env_init_percpu();
+
 }
 
 // Load GDT and segment descriptors.
@@ -185,9 +177,7 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
-	e->env_pgdir = (pde_t *)page2kva(p);
-	p->pp_ref++;
-	memcpy(e->env_pgdir, kern_pgdir, PGSIZE);
+	memcpy(p, kern_pgdir, PGSIZE);
 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
@@ -276,6 +266,15 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+	//uint32_t aligned_va = ROUNDDOWN(va, PGSIZE);
+	uint32_t aligned_len = ROUNDUP(len, PGSIZE);
+
+	for(int offset = 0; offset < aligned_len; offset += PGSIZE) {
+		struct PageInfo* p = page_alloc(ALLOC_ZERO);
+		if (!p)
+			panic("Could not allocate page");
+		page_insert(e->env_pgdir, p, va + offset, PTE_U | PTE_W);
+	}
 }
 
 //
@@ -332,11 +331,26 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here.
+	struct Elf* elf = (struct Elf*) binary;
+	if (elf->e_magic != ELF_MAGIC)
+		panic("Invalid ELF!");
 
+	int number_of_segments = elf->e_phnum;
+	for (int i = 0; i < number_of_segments; i++) {
+		struct Proghdr* seg = (struct Proghdr*)(binary + (i+1)*elf->e_phoff);
+		if (seg->p_type != ELF_PROG_LOAD)
+			continue;
+
+		region_alloc(e, (void*)(seg->p_va), seg->p_memsz);
+		memset((void*)(seg->p_va), seg->p_va + seg->p_filesz, 0);
+		memcpy((void*)(seg->p_va), binary + seg->p_offset, seg->p_filesz);
+	}	
+	e->env_tf.tf_eip = elf->e_entry;
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+	region_alloc(e, (void*)(USTACKTOP - PGSIZE), PGSIZE);
 }
 
 //
