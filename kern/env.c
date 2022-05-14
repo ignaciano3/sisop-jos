@@ -335,7 +335,14 @@ load_icode(struct Env *e, uint8_t *binary)
 	if (elf->e_magic != ELF_MAGIC)
 		panic("Invalid ELF!");
 
-	int number_of_segments = elf->e_phnum;
+
+	//  Loading the segments is much simpler if you can move data
+	//  directly into the virtual addresses stored in the ELF binary.
+	//  So which page directory should be in force during
+	//  this function?
+	lcr3(PADDR(e->env_pgdir));
+
+	uint16_t number_of_segments = elf->e_phnum;
 	for (int i = 0; i < number_of_segments; i++) {
 		struct Proghdr* seg = (struct Proghdr*)(binary + (i+1)*elf->e_phoff);
 		if (seg->p_type != ELF_PROG_LOAD)
@@ -351,6 +358,9 @@ load_icode(struct Env *e, uint8_t *binary)
 
 	// LAB 3: Your code here.
 	region_alloc(e, (void*)(USTACKTOP - PGSIZE), PGSIZE);
+
+	// Switch back to the kernel page directory.
+	lcr3(PADDR(kern_pgdir));
 }
 
 //
