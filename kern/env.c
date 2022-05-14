@@ -349,9 +349,14 @@ load_icode(struct Env *e, uint8_t *binary)
 			continue;
 
 		region_alloc(e, (void *) (seg->p_va), seg->p_memsz);
-		memset((void *) (seg->p_va), seg->p_va + seg->p_filesz, 0);
+		// Copy the data from the ELF binary to the virtual address
 		memcpy((void *) (seg->p_va), binary + seg->p_offset, seg->p_filesz);
+		// Clear the rest of the segment to zero from va + filesz to va + memsz
+		memset((void *) (seg->p_va + seg->p_filesz),
+		       0,
+		       seg->p_memsz - seg->p_filesz);
 	}
+
 	e->env_tf.tf_eip = elf->e_entry;
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
