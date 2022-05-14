@@ -184,7 +184,7 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
-	e->env_pgdir = (pde_t *)page2kva(p);
+	e->env_pgdir = (pde_t *) page2kva(p);
 	p->pp_ref++;
 	memcpy(p, kern_pgdir, PGSIZE);
 	// UVPT maps the env's own page table read-only.
@@ -390,13 +390,13 @@ env_create(uint8_t *binary, enum EnvType type)
 	// LAB 3: Your code here.
 	struct Env *new_env;
 	int aux = env_alloc(&new_env, 0);
-    if (aux < 0) {
-        panic("env_create: %e", aux);
-    }
+	if (aux < 0) {
+		panic("env_create: %e", aux);
+	}
 
-    load_icode(new_env, binary);
+	load_icode(new_env, binary);
 
-    new_env->env_type = type;
+	new_env->env_type = type;
 }
 
 //
@@ -514,12 +514,12 @@ env_run(struct Env *e)
 
 	// LAB 3: Your code here.
 	if (curenv && curenv->env_status == ENV_RUNNING)
-			curenv->env_status = ENV_RUNNABLE;
+		curenv->env_status = ENV_RUNNABLE;
 
 	curenv = e;
 	curenv->env_status = ENV_RUNNING;
 	curenv->env_runs++;
 	lcr3(PADDR(curenv->env_pgdir));
 	env_pop_tf(&curenv->env_tf);
-	//should not return	
+	// should not return
 }
