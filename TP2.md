@@ -51,6 +51,27 @@ Comienzo de secuencia de destrucción/creación:
 
 
 env_pop_tf
+
+**Dada la secuencia de instrucciones assembly en la función, describir qué contiene durante su ejecución:**
+        **el tope de la pila justo antes popal**
+Es la dirección base del Trapframe, es decir a la dirección base del parámetro, que tiene como primer campo PushRegs.
+        **el tope de la pila justo antes iret**
+Estaría apuntando al campo eip (instruction pointer).
+        **el tercer elemento de la pila justo antes de iret**
+El tercer elemento de la pila justo antes del iret es el campo eflags.
+
+
+**    En la documentación de iret en [IA32-2A] se dice:**
+
+**        If the return is to another privilege level, the IRET instruction also pops the stack pointer and SS from the stack, before resuming program execution.**
+
+**    ¿Cómo determina la CPU (en x86) si hay un cambio de ring (nivel de privilegio)? Ayuda: Responder antes en qué lugar exacto guarda x86 el nivel de privilegio actual. ¿Cuántos bits almacenan ese privilegio?**
+
+En la arquitectura x86, el nivel de privilegio se guarda en los últimos 2 bits del registro %cs. Se cuentan con los siguientes niveles de privilegio, el de mayor privilegio siendo el ring 0 (modo kernel, los dos bits son 00) y el otro el ring 3 (modo usuario, los dos bits son 11). 
+
+La CPU (en x86) compara el %cs con el %cs del Trapframe: si hay diferencia, entonces hay un cambio en el nivel de privilegio.
+
+
 ----------
 
 ...
