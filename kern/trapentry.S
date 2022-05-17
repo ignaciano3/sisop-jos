@@ -46,10 +46,51 @@
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
+TRAPHANDLER_NOEC(trap_0, T_DIVIDE); // 0
+TRAPHANDLER_NOEC(trap_1, T_DEBUG); // 1
+TRAPHANDLER_NOEC(trap_2, T_NMI); // 2
+TRAPHANDLER_NOEC(trap_3, T_BRKPT); // 3
+TRAPHANDLER_NOEC(trap_4, T_OFLOW); // 4
+TRAPHANDLER_NOEC(trap_5, T_BOUND); // 5
+TRAPHANDLER_NOEC(trap_6, T_ILLOP); // 6
+TRAPHANDLER_NOEC(trap_7, T_DEVICE); // 7
+
+TRAPHANDLER(trap_8, T_DBLFLT); // 8
+// Trap 9 is reserved.
+TRAPHANDLER(trap_10, T_TSS); // 10
+TRAPHANDLER(trap_11, T_SEGNP); // 11
+TRAPHANDLER(trap_12, T_STACK); // 12
+TRAPHANDLER(trap_13, T_GPFLT); // 13
+TRAPHANDLER(trap_14, T_PGFLT); // 14
+// Trap 15 is reserved.
+TRAPHANDLER_NOEC(trap_16, T_FPERR); // 16
+TRAPHANDLER_NOEC(trap_17, T_ALIGN); // 17
+TRAPHANDLER_NOEC(trap_18, T_MCHK); // 18
+TRAPHANDLER_NOEC(trap_19, T_SIMDERR); // 19
+TRAPHANDLER_NOEC(trap_48, T_SYSCALL); // 48
+
 
 
 
 /*
  * Lab 3: Your code here for _alltraps
  */
+_alltraps:
+    // Push registers
+    pushl %ds;
+    pushl %es;
+    pushal;
+    // Load GD_KD
+    mov $(GD_KD), %ax;
+    mov %ax, %ds;
+    mov %ax, %es;
+    // Push Trapframe pointer as param to trap
+    pushl %esp;
+    call trap;
+
+
+
+
+
+
 
