@@ -186,7 +186,7 @@ env_setup_vm(struct Env *e)
 	// LAB 3: Your code here.
 	e->env_pgdir = (pde_t *) page2kva(p);
 	p->pp_ref++;
-	memcpy(p, kern_pgdir, PGSIZE);
+	memcpy(e->env_pgdir, kern_pgdir, PGSIZE);
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
 	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
@@ -351,9 +351,11 @@ load_icode(struct Env *e, uint8_t *binary)
 	lcr3(PADDR(e->env_pgdir));
 
 	uint16_t number_of_segments = elf->e_phnum;
+    //Each individual program header takes up the same size
+    int indiv_ph_size = elf->e_phentsize / number_of_segments; 
 	for (int i = 0; i < number_of_segments; i++) {
 		struct Proghdr *seg =
-		        (struct Proghdr *) (binary + (i + 1) * elf->e_phoff);
+		        (struct Proghdr *) (binary + elf->e_phoff + i * indiv_ph_size);
 		if (seg->p_type != ELF_PROG_LOAD)
 			continue;
 
