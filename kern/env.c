@@ -349,22 +349,20 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  this function?
 	lcr3(PADDR(e->env_pgdir));
 
-	uint16_t number_of_segments = elf->e_phnum;
-    //Each individual program header takes up the same size
-    int indiv_ph_size = elf->e_phentsize / number_of_segments; 
-	for (int i = 0; i < number_of_segments; i++) {
-		struct Proghdr *seg =
-		        (struct Proghdr *) (binary + elf->e_phoff + i * indiv_ph_size);
-		if (seg->p_type != ELF_PROG_LOAD)
+	// Like bootmain() in main.c
+	struct Proghdr *ph = (struct Proghdr *) (binary + elf->e_phoff);
+	struct Proghdr *eph = ph + elf->e_phnum;
+	for (; ph < eph; ph++) {
+		if (ph->p_type != ELF_PROG_LOAD)
 			continue;
 
-		region_alloc(e, (void *) (seg->p_va), seg->p_memsz);
+		region_alloc(e, (void *) (ph->p_va), ph->p_memsz);
 		// Copy the data from the ELF binary to the virtual address
-		memcpy((void *) (seg->p_va), binary + seg->p_offset, seg->p_filesz);
+		memcpy((void *) (ph->p_va), binary + ph->p_offset, ph->p_filesz);
 		// Clear the rest of the segment to zero from va + filesz to va + memsz
-		memset((void *) (seg->p_va + seg->p_filesz),
+		memset((void *) (ph->p_va + ph->p_filesz),
 		       0,
-		       seg->p_memsz - seg->p_filesz);
+		       ph->p_memsz - ph->p_filesz);
 	}
 
 	e->env_tf.tf_eip = elf->e_entry;

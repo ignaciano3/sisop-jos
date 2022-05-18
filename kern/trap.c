@@ -62,35 +62,27 @@ void
 trap_init(void)
 {
 	extern struct Segdesc gdt[];
-
-//// - sel: Code segment selector for interrupt/trap handler
-//// - off: Offset in code segment for interrupt/trap handler
-//// - dpl: Descriptor Privilege Level -
-////	  the privilege level required for software to invoke
-////	  this interrupt/trap gate explicitly using an int instruction.
-//#define SETGATE(gate, istrap, sel, off, dpl)
-
 	// LAB 3: Your code here.
 
-	extern void trap_0();
-	extern void trap_1();
-	extern void trap_2();
-	extern void trap_3();
-	extern void trap_4();
-	extern void trap_5();
-	extern void trap_6();
-	extern void trap_7();
-	extern void trap_8();
-	extern void trap_10();
-	extern void trap_11();
-	extern void trap_12();
-	extern void trap_13();
-	extern void trap_14();
-	extern void trap_16();
-	extern void trap_17();
-	extern void trap_18();
-	extern void trap_19();
-	extern void trap_48();
+	void trap_0();
+	void trap_1();
+	void trap_2();
+	void trap_3();
+	void trap_4();
+	void trap_5();
+	void trap_6();
+	void trap_7();
+	void trap_8();
+	void trap_10();
+	void trap_11();
+	void trap_12();
+	void trap_13();
+	void trap_14();
+	void trap_16();
+	void trap_17();
+	void trap_18();
+	void trap_19();
+	void trap_48();
 
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, trap_0, 0);
 	SETGATE(idt[T_DEBUG], 0, GD_KT, trap_1, 0);
@@ -111,7 +103,6 @@ trap_init(void)
 	SETGATE(idt[T_MCHK], 0, GD_KT, trap_18, 0);
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, trap_19, 0);
 	SETGATE(idt[T_SYSCALL], 0, GD_KT, trap_48, 3);
-
 
 	// Per-CPU setup
 	trap_init_percpu();
