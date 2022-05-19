@@ -246,7 +246,15 @@ No hubo cambios (¿ por qué no cambió CS ?).
 kern_idt
 --------
 
-...
+**Leer user/softint.c y ejecutarlo con `make run-softint-nox`. 
+¿Qué interrupción trata de generar? ¿Qué interrupción se genera? Si son diferentes a la que invoca el programa… 
+¿cuál es el mecanismo por el que ocurrió esto, y por qué motivos? ¿Qué modificarían en JOS para cambiar este comportamiento?**
+
+La interrupción que trata de generar es la de _page fault_ (es la 14 en `idt`), pero se genera una _general protection_.
+Esto se debe a que en el llamado a `softinc` se tienen privilegios de usuarios (ring 3) pero la interrupción _page fault_
+fue declarada en `trap.c` en `SETGATE(idt[T_PGFLT], 0, GD_KT, trap_14, 0);` con privilegios de kernel (ring 0) lo que significa
+que solo el kernel puede invocarla y transferir la ejecución a la misma. Para cambiar este comportamiento, deberíamos configurar
+la interrupción _page fault_ como `SETGATE(idt[T_PGFLT], 0, GD_KT, trap_14, 3);`
 
 
 user_evilhello
