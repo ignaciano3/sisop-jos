@@ -259,6 +259,81 @@ la interrupción _page fault_ como `SETGATE(idt[T_PGFLT], 0, GD_KT, trap_14, 3);
 
 user_evilhello
 --------------
+Se tiene en evilhello:  
+```
+void
+umain(int argc, char **argv)
+{
+	// try to print the kernel entry point as a string!  mua ha ha!
+	sys_cputs((char*)0xf010000c, 100);
+}
+```
+
+Al ejecutar evilhello se muestra:
+```
+[00000000] new env 00001000
+Incoming TRAP frame at 0xefffffbc
+f�rIncoming TRAP frame at 0xefffffbc
+[00001000] exiting gracefully
+[00001000] free env 00001000
+```
+Se observa cómo se crea el environment, se hace un cambio de contexto al programa, se imprime en pantalla 'f�r' y se vuelve hacer otro cambio de contexto, finalizando el proceso y consecuentemente liberando los recursos del ambiente.
+
+Se tiene por otro lado user_evilhello:
+```
+void
+umain(int argc, char **argv)
+{
+    char *entry = (char *) 0xf010000c;
+    char first = *entry;
+    sys_cputs(&first, 1);
+}
+```
+Que al ejecutarse genera un page fault:
+```
+[00000000] new env 00001000
+Incoming TRAP frame at 0xefffffbc
+[00001000] user fault va f010000c ip 0080003d
+TRAP frame at 0xf01c8000
+  edi  0x00000000
+  esi  0x00000000
+  ebp  0xeebfdfd0
+  oesp 0xefffffdc
+  ebx  0x00000000
+  edx  0x00000000
+  ecx  0x00000000
+  eax  0x00000000
+  es   0x----0023
+  ds   0x----0023
+  trap 0x0000000e Page Fault
+  cr2  0xf010000c
+  err  0x00000005 [user, read, protection]
+  eip  0x0080003d
+  cs   0x----001b
+  flag 0x00000082
+  esp  0xeebfdfb0
+  ss   0x----0023
+[00001000] free env 00001000
+```
+
+**¿En qué se diferencia el código de la versión en evilhello.c mostrada arriba?**
+
+**¿En qué cambia el comportamiento durante la ejecución?**
+
+    **¿Por qué? ¿Cuál es el mecanismo?**
+
+
+Al mirar por encima ambos programas, uno pensaría que deberían hacer lo mismo. Al final, el flujo del programa termina llevando a imprimir el primer carácter de la dirección 0xf010000c. Sin embargo, se mostró que uno sí logra cumplir con su objetivo, y el otro genera un Page Fault en el intento. 
+
+La principal diferencia en el código es cómo se obtiene el carácter a imprimir: el primer programa le manda el puntero a la syscall, mientras que el segundo desreferencia en el mismo programa el puntero a la dirección que se quiere imprimir.
+
+**Listar las direcciones de memoria que se acceden en ambos casos, y en qué ring se realizan. **
+En ambos casos, la dirección de memoria a ser accedida es la misma (0xf010000c), solo que en evilhello se accede desde el kernel (ring 0) y en user_evilhello se accede desde modo usuario (ring 3)
+
+**¿Es esto un problema? ¿Por qué?**
+Sí, esto es lo que genera una inconsistencia entre ambos programas, porque aunque ambos estén intentando acceder a la misma dirección, el primero la accede desde el kernel (por lo que no hay ningún problema en acceder a esta) y el segundo desde el modo usuario (generando así un Page Fault ya que el usuario no tiene permisos a acceder a esta dirección de memoria).
+
+Se concluye entonces que el error está en que el kernel accede a esta dirección de memoria sin antes verificar que el usuario puede acceder a la misma.
 
 ...
 
