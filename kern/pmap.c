@@ -214,7 +214,7 @@ mem_init(void)
 	//     * [KSTACKTOP-KSTKSIZE, KSTACKTOP) -- backed by physical memory
 	//     * [KSTACKTOP-PTSIZE, KSTACKTOP-KSTKSIZE) -- not backed; so if
 	//       the kernel overflows its stack, it will fault rather than
-	//       overwrite memory.  Known as a "guardk page".
+	//       overwrite memory.  Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
 	boot_map_region(kern_pgdir,
@@ -594,21 +594,16 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
-	int region_size = ROUNDUP(va + len, PGSIZE) - ROUNDDOWN(va, PGSIZE);
-	for (int offset = 0; offset < region_size; offset+=PGSIZE) {
-		uint32_t current_page = ROUNDDOWN((uint32_t)(va) + offset, PGSIZE);
-		if (current_page > ULIM) {
-			user_mem_check_addr = current_page;
-			return -E_FAULT;
-		}
-		pte_t *pte = pgdir_walk(env->env_pgdir, 
-								(void*) (current_page), 0);
-		if (!pte) {
-			user_mem_check_addr = current_page;
-			return -E_FAULT;
-		}
-		if (!(*pte & (perm | PTE_P))) {
-			user_mem_check_addr = current_page;
+	const void *current_va = ROUNDDOWN(va, PGSIZE);
+	const void *final_va = ROUNDUP(va + len, PGSIZE);
+
+	for (; current_va < final_va; current_va += PGSIZE) {
+		pte_t *pte = pgdir_walk(env->env_pgdir, (void *) current_va, 0);
+		if (!pte || current_va > (void *) ULIM ||
+		    !(*pte & (perm | PTE_P))) {
+			user_mem_check_addr = (current_va >= va)
+			                              ? (uintptr_t) current_va
+			                              : (uintptr_t) va;
 			return -E_FAULT;
 		}
 	}

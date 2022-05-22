@@ -268,8 +268,9 @@ la interrupción _page fault_ como `SETGATE(idt[T_PGFLT], 0, GD_KT, trap_14, 3);
 
 user_evilhello
 --------------
-Se tiene en evilhello:  
-```
+Se tiene en _evilhello.c_:  
+
+```C
 void
 umain(int argc, char **argv)
 {
@@ -278,18 +279,20 @@ umain(int argc, char **argv)
 }
 ```
 
-Al ejecutar evilhello se muestra:
-```
+Al ejecutar _evilhello_ se muestra:
+```bash
 [00000000] new env 00001000
 Incoming TRAP frame at 0xefffffbc
 f�rIncoming TRAP frame at 0xefffffbc
 [00001000] exiting gracefully
 [00001000] free env 00001000
 ```
-Se observa cómo se crea el environment, se hace un cambio de contexto al programa, se imprime en pantalla 'f�r' y se vuelve hacer otro cambio de contexto, finalizando el proceso y consecuentemente liberando los recursos del ambiente.
+Se observa cómo se crea el environment, se hace un cambio de contexto al programa, 
+se imprime en pantalla 'f�r' y se vuelve hacer otro cambio de contexto, finalizando el proceso y consecuentemente liberando los recursos del ambiente.
 
-Se tiene por otro lado user_evilhello:
-```
+Se tiene, por otro lado, user_evilhello:
+
+```C
 void
 umain(int argc, char **argv)
 {
@@ -298,8 +301,10 @@ umain(int argc, char **argv)
     sys_cputs(&first, 1);
 }
 ```
+
 Que al ejecutarse genera un page fault:
-```
+
+```bash
 [00000000] new env 00001000
 Incoming TRAP frame at 0xefffffbc
 [00001000] user fault va f010000c ip 0080003d
@@ -327,22 +332,32 @@ TRAP frame at 0xf01c8000
 
 **¿En qué se diferencia el código de la versión en evilhello.c mostrada arriba?**
 
-**¿En qué cambia el comportamiento durante la ejecución?**
+En la version de _evilhello.c_ se llama a `sys_cputs()` directamente con la dirección del entry point del kernel, mientras
+que en _user_evilhello_ se intenta 'engañar' desreferenciado el contenido del puntero al entry point del kernel desde la 
+aplicación de usuario ocurriendo un _page fault_ antes de llamar `sys_cputs()`.
 
-    **¿Por qué? ¿Cuál es el mecanismo?**
+**¿En qué cambia el comportamiento durante la ejecución? ¿Por qué? ¿Cuál es el mecanismo?**
 
+Al mirar por encima ambos programas, uno pensaría que deberían hacer lo mismo. Al final, el flujo del programa termina llevando a imprimir el primer carácter de la dirección `0xf010000c`. 
+Sin embargo, se mostró que uno sí logra cumplir con su objetivo, y el otro genera un _Page Fault_ en el intento. 
 
-Al mirar por encima ambos programas, uno pensaría que deberían hacer lo mismo. Al final, el flujo del programa termina llevando a imprimir el primer carácter de la dirección 0xf010000c. Sin embargo, se mostró que uno sí logra cumplir con su objetivo, y el otro genera un Page Fault en el intento. 
+La principal diferencia en el código es cómo se obtiene el carácter a imprimir: 
+el primer programa le manda el puntero a la syscall, mientras que el segundo desreferencia en el mismo programa el puntero a la dirección que se quiere imprimir.
 
-La principal diferencia en el código es cómo se obtiene el carácter a imprimir: el primer programa le manda el puntero a la syscall, mientras que el segundo desreferencia en el mismo programa el puntero a la dirección que se quiere imprimir.
+En _user_evilhello_ la dirección que se desea acceder pertenece al kernel y no es accesible por el usuario, la MMU detecta
+el acceso sin permisos, ocurre el _page fault_ y destruye el proceso. En _evilhello.c_, la misma dirección se accede directamente
+en modo kernel mediante el handler de la syscall, por lo cual el proceso finaliza con éxito.
 
-**Listar las direcciones de memoria que se acceden en ambos casos, y en qué ring se realizan. **
-En ambos casos, la dirección de memoria a ser accedida es la misma (0xf010000c), solo que en evilhello se accede desde el kernel (ring 0) y en user_evilhello se accede desde modo usuario (ring 3)
+**Listar las direcciones de memoria que se acceden en ambos casos, y en qué ring se realizan.**
+
+En ambos casos, la dirección de memoria a ser accedida es la misma `0xf010000c`, solo que en _evilhello.c_ se accede desde 
+el kernel (ring 0) y en _user_evilhello_ se accede desde modo usuario (ring 3)
 
 **¿Es esto un problema? ¿Por qué?**
-Sí, esto es lo que genera una inconsistencia entre ambos programas, porque aunque ambos estén intentando acceder a la misma dirección, el primero la accede desde el kernel (por lo que no hay ningún problema en acceder a esta) y el segundo desde el modo usuario (generando así un Page Fault ya que el usuario no tiene permisos a acceder a esta dirección de memoria).
 
-Se concluye entonces que el error está en que el kernel accede a esta dirección de memoria sin antes verificar que el usuario puede acceder a la misma.
+Sí, esto es lo que genera una inconsistencia entre ambos programas, porque aunque ambos estén intentando acceder a la misma dirección, 
+el primero la accede desde el kernel (por lo que no hay ningún problema en acceder a esta) y el segundo desde el modo usuario (generando así un Page Fault, ya que el usuario no tiene permisos a acceder a esta dirección de memoria).
 
-...
+Se concluye entonces que el error está en que el kernel accede a esta dirección de memoria mediante un syscall,
+sin antes verificar que el usuario puede acceder a la misma.
 
