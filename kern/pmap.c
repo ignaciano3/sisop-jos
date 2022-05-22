@@ -596,13 +596,13 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 	// LAB 3: Your code here.
 	int region_size = ROUNDUP(va + len, PGSIZE) - ROUNDDOWN(va, PGSIZE);
 	for (int offset = 0; offset < region_size; offset+=PGSIZE) {
-		uint32_t current_page = (uint32_t)(va) + offset;
+		uint32_t current_page = ROUNDDOWN((uint32_t)(va) + offset, PGSIZE);
 		if (current_page > ULIM) {
 			user_mem_check_addr = current_page;
 			return -E_FAULT;
 		}
 		pte_t *pte = pgdir_walk(env->env_pgdir, 
-								(void*) (va + offset), 0);
+								(void*) (current_page), 0);
 		if (!pte) {
 			user_mem_check_addr = current_page;
 			return -E_FAULT;

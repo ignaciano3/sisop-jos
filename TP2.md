@@ -90,9 +90,9 @@ Breakpoint 1, env_pop_tf (tf=0xf01c7000) at kern/env.c:478
 **En QEMU, entrar en modo monitor (Ctrl-a c), y mostrar las cinco primeras líneas del comando info registers.**
 ```
 (qemu) info registers
-EAX=003bc000 EBX=00010094 ECX=f03bc000 EDX=0000020c
-ESI=00010094 EDI=00000000 EBP=f0118fd8 ESP=f0118fbc
-EIP=f0102ed8 EFL=00000092 [--S-A--] CPL=0 II=0 A20=1 SMM=0 HLT=0
+EAX=003bc000 EBX=00010094 ECX=f03bc000 EDX=00000209
+ESI=00010094 EDI=00000000 EBP=f0119fd8 ESP=f0119fbc
+EIP=f0102f5c EFL=00000092 [--S-A--] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 ```
@@ -100,19 +100,19 @@ CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 
 ```  
 (gdb) p tf
-$1 = (struct Trapframe *) 0xf01c7000
+$1 = (struct Trapframe *) 0xf01c8000
 ```
 **Imprimir, con x/Nx tf tantos enteros como haya en el struct Trapframe donde N = sizeof(Trapframe) / sizeof(int).**
 
 ```
-(gdb) print sizeof(struct Trapframe) / sizeof(int)$7 = 17
+(gdb) print sizeof(struct Trapframe) / sizeof(int) = 17
 
 (gdb) x/17x tf
-0xf01c7000:     0x00000000      0x00000000      0x00000000      0x00000000
-0xf01c7010:     0x00000000      0x00000000      0x00000000      0x00000000
-0xf01c7020:     0x00000023      0x00000023      0x00000000      0x00000000
-0xf01c7030:     0x00800020      0x0000001b      0x00000000      0xeebfe000
-0xf01c7040:     0x00000023
+0xf01c8000:     0x00000000      0x00000000      0x00000000      0x00000000
+0xf01c8010:     0x00000000      0x00000000      0x00000000      0x00000000
+0xf01c8020:     0x00000023      0x00000023      0x00000000      0x00000000
+0xf01c8030:     0x00800020      0x0000001b      0x00000000      0xeebfe000
+0xf01c8040:     0x00000023
 ```
 **Avanzar hasta justo después del movl ...,%esp, usando si M para ejecutar tantas instrucciones como sea necesario en un solo paso:**
 
@@ -133,11 +133,11 @@ Dump of assembler code for function env_pop_tf:
 **Comprobar, con x/Nx $sp que los contenidos son los mismos que tf (donde N es el tamaño de tf).**
 ```
 (gdb) x/17x $sp
-0xf01c7000:     0x00000000      0x00000000      0x00000000      0x00000000
-0xf01c7010:     0x00000000      0x00000000      0x00000000      0x00000000
-0xf01c7020:     0x00000023      0x00000023      0x00000000      0x00000000
-0xf01c7030:     0x00800020      0x0000001b      0x00000000      0xeebfe000
-0xf01c7040:     0x00000023
+0xf01c8000:     0x00000000      0x00000000      0x00000000      0x00000000
+0xf01c8010:     0x00000000      0x00000000      0x00000000      0x00000000
+0xf01c8020:     0x00000023      0x00000023      0x00000000      0x00000000
+0xf01c8030:     0x00800020      0x0000001b      0x00000000      0xeebfe000
+0xf01c8040:     0x00000023
 ```
 
 **Describir cada uno de los valores. Para los valores no nulos, se debe indicar dónde se configuró inicialmente el valor, y qué representa.**
@@ -181,9 +181,9 @@ El registro restante es el tf_eip, que se inicializó en la función load_icode:
 Se recuerda el info registers justo al entrar a la función env_pop_tf:
 ```
 (qemu) info registers
-EAX=003bc000 EBX=00010094 ECX=f03bc000 EDX=0000020c
-ESI=00010094 EDI=00000000 EBP=f0118fd8 ESP=f0118fbc
-EIP=f0102ed8 EFL=00000092 [--S-A--] CPL=0 II=0 A20=1 SMM=0 HLT=0
+EAX=003bc000 EBX=00010094 ECX=f03bc000 EDX=00000209
+ESI=00010094 EDI=00000000 EBP=f0119fd8 ESP=f0119fbc
+EIP=f0102f5c EFL=00000092 [--S-A--] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 ```
@@ -195,16 +195,14 @@ Ahora se tiene, justo antes de ejecutar iret:
 
 (qemu) info registers 
 EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000000
-ESI=00000000 EDI=00000000 EBP=00000000 ESP=f01c7030
-EIP=f0102eeb EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
+ESI=00000000 EDI=00000000 EBP=00000000 ESP=f01c8030
+EIP=f0102f6f EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0023 00000000 ffffffff 00cff300 DPL=3 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
-
 ```
 Primero se popearon los registros de propósito general (popa), obteniendo así los valores del trapframe del proceso (que eran todos ceros), después el registro es (pop es) y ds (pop ds), este último cambiando el nivel de privilegio (nótese como pasa de nivel 0 (kernel) a nivel 3 (usuario)). 
 
-El puntero al stack también cambió debido a la ejecución de instrucciones del programa.
-
+El puntero al stack también cambió debido a la ejecución de instrucciones del programa, al igual que el puntero a instrucción.
 
 **Ejecutar la instrucción iret. En ese momento se ha realizado el cambio de contexto y los símbolos del kernel ya no son válidos.**
 
@@ -227,16 +225,27 @@ $4 = (void (*)()) 0x800020 <_start>
 ```
 
 **Mostrar una última vez la salida de info registers en QEMU, y explicar los cambios producidos.**
+
+La última vez que se imprimió, se obtuvo:
+```
+EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000000
+ESI=00000000 EDI=00000000 EBP=00000000 ESP=f01c8030
+EIP=f0102f6f EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
+ES =0023 00000000 ffffffff 00cff300 DPL=3 DS   [-WA]
+CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
+```
+Ahora se tiene:
 ```
 (qemu) info registers 
 EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000000
-ESI=00000000 EDI=00000000 EBP=00000000 ESP=f01c7030
-EIP=f0102eeb EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
+ESI=00000000 EDI=00000000 EBP=00000000 ESP=f01c8030
+EIP=f0102f6f EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0023 00000000 ffffffff 00cff300 DPL=3 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 
+
 ```
-No hubo cambios (¿ por qué no cambió CS ?).
+No hubo cambios.
 
 **Poner un breakpoint temporal (tbreak, se aplica una sola vez) en la función syscall() y explicar qué ocurre justo tras ejecutar la instrucción int $0x30. Usar, de ser necesario, el monitor de QEMU.**
 
