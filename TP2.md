@@ -248,7 +248,7 @@ CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 No hubo cambios.
 
 **Poner un breakpoint temporal (tbreak, se aplica una sola vez) en la función syscall() y explicar qué ocurre justo tras ejecutar la instrucción int $0x30. Usar, de ser necesario, el monitor de QEMU.**
-
+Int N es una excepción producida por el mismo software. En este caso, es un int 48, que es el número reservado para producir una excepción y poder ejecutar una syscall.
 ...
 
 
