@@ -51,35 +51,24 @@ Comienzo de secuencia de destrucción/creación:
 
 
 env_pop_tf
+---------
 
 **Dada la secuencia de instrucciones assembly en la función, describir qué contiene durante su ejecución:**
-        **el tope de la pila justo antes popal**
-Es la dirección base del Trapframe, es decir a la dirección base del parámetro, que tiene como primer campo PushRegs.
-        **el tope de la pila justo antes iret**
-Estaría apuntando al campo eip (instruction pointer).
-        **el tercer elemento de la pila justo antes de iret**
-El tercer elemento de la pila justo antes del iret es el campo eflags.
+- **el tope de la pila justo antes popal**: Es la dirección base del Trapframe, es decir a la dirección base del parámetro, que tiene como primer campo PushRegs.
+- **el tope de la pila justo antes iret**: Estaría apuntando al campo eip (instruction pointer).
+- **el tercer elemento de la pila justo antes de iret**: El tercer elemento de la pila justo antes del iret es el campo eflags.
 
 
-**    En la documentación de iret en [IA32-2A] se dice:**
-
-**        If the return is to another privilege level, the IRET instruction also pops the stack pointer and SS from the stack, before resuming program execution.**
-
-**    ¿Cómo determina la CPU (en x86) si hay un cambio de ring (nivel de privilegio)? Ayuda: Responder antes en qué lugar exacto guarda x86 el nivel de privilegio actual. ¿Cuántos bits almacenan ese privilegio?**
+**¿Cómo determina la CPU (en x86) si hay un cambio de ring (nivel de privilegio)? Ayuda: Responder antes en qué lugar exacto guarda x86 el nivel de privilegio actual.
+¿Cuántos bits almacenan ese privilegio?**
 
 En la arquitectura x86, el nivel de privilegio se guarda en los últimos 2 bits del registro %cs. Se cuentan con los siguientes niveles de privilegio, el de mayor privilegio siendo el ring 0 (modo kernel, los dos bits son 00) y el otro el ring 3 (modo usuario, los dos bits son 11). 
 
 La CPU (en x86) compara el %cs con el %cs del Trapframe: si hay diferencia, entonces hay un cambio en el nivel de privilegio.
 
-
-----------
-
-...
-
-
 gdb_hello
 ---------
-**Poner un breakpoint en env_pop_tf() y continuar la ejecución hasta allí.**
+**Poner un breakpoint en `env_pop_tf()` y continuar la ejecución hasta allí.**
 ```
 The target architecture is assumed to be i386
 => 0xf0102ed8 <env_pop_tf>:     endbr32
@@ -87,7 +76,7 @@ The target architecture is assumed to be i386
 Breakpoint 1, env_pop_tf (tf=0xf01c7000) at kern/env.c:478  
 ```
 
-**En QEMU, entrar en modo monitor (Ctrl-a c), y mostrar las cinco primeras líneas del comando info registers.**
+**En QEMU, entrar en modo monitor (`Ctrl-a c`), y mostrar las cinco primeras líneas del comando `info registers`.**
 ```
 (qemu) info registers
 EAX=003bc000 EBX=00010094 ECX=f03bc000 EDX=00000209
@@ -96,13 +85,13 @@ EIP=f0102f5c EFL=00000092 [--S-A--] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 ```
-**De vuelta a GDB, imprimir el valor del argumento tf:**
+**De vuelta a GDB, imprimir el valor del argumento _tf_:**
 
 ```  
 (gdb) p tf
 $1 = (struct Trapframe *) 0xf01c8000
 ```
-**Imprimir, con x/Nx tf tantos enteros como haya en el struct Trapframe donde N = sizeof(Trapframe) / sizeof(int).**
+**Imprimir, con `x/Nx tf` tantos enteros como haya en el struct Trapframe donde N = sizeof(Trapframe) / sizeof(int).**
 
 ```
 (gdb) print sizeof(struct Trapframe) / sizeof(int) = 17
@@ -114,7 +103,8 @@ $1 = (struct Trapframe *) 0xf01c8000
 0xf01c8030:     0x00800020      0x0000001b      0x00000000      0xeebfe000
 0xf01c8040:     0x00000023
 ```
-**Avanzar hasta justo después del movl ...,%esp, usando si M para ejecutar tantas instrucciones como sea necesario en un solo paso:**
+
+**Avanzar hasta justo después del `movl ...,%esp`, usando `si M` para ejecutar tantas instrucciones como sea necesario en un solo paso:**
 
 ```
 (gdb) disas
@@ -127,10 +117,9 @@ Dump of assembler code for function env_pop_tf:
    0xf0102edf <+7>:     sub    $0xc,%esp
    0xf0102ee2 <+10>:    mov    0x8(%ebp),%esp
 => 0xf0102ee5 <+13>:    popa
-
 ```
 
-**Comprobar, con x/Nx $sp que los contenidos son los mismos que tf (donde N es el tamaño de tf).**
+**Comprobar, con `x/Nx $sp` que los contenidos son los mismos que tf (donde N es el tamaño de tf).**
 ```
 (gdb) x/17x $sp
 0xf01c8000:     0x00000000      0x00000000      0x00000000      0x00000000
@@ -141,7 +130,7 @@ Dump of assembler code for function env_pop_tf:
 ```
 
 **Describir cada uno de los valores. Para los valores no nulos, se debe indicar dónde se configuró inicialmente el valor, y qué representa.**
-```
+
 | Pos | Valor | Atributo | Descripcion | 
   |:---:|:---:|:---:|:---:|
   |  1 | 0x0  | reg_edi  | registro de proposito general |
@@ -161,24 +150,27 @@ Dump of assembler code for function env_pop_tf:
   | 15 | 0x0  | tf_eflags  | flags |
   | 16 | 0xeebfe000 | tf_esp | puntero al stack |
   | 17 | 0x23 | tf_ss  | puntero de segmento |
-```
-De los registros más relevantes e inicializados (6 en total), 5 se inicializaron de la siguiente forma, en la función env_alloc:
+
+De los registros más relevantes e inicializados (6 en total), 5 se inicializaron de la siguiente forma, en la función `env_alloc`:
 
 ```
-	e->env_tf.tf_ds = GD_UD | 3;
-	e->env_tf.tf_es = GD_UD | 3;
-	e->env_tf.tf_ss = GD_UD | 3;
-	e->env_tf.tf_esp = USTACKTOP;
-	e->env_tf.tf_cs = GD_UT | 3;
+e->env_tf.tf_ds = GD_UD | 3;
+e->env_tf.tf_es = GD_UD | 3;
+e->env_tf.tf_ss = GD_UD | 3;
+e->env_tf.tf_esp = USTACKTOP;
+e->env_tf.tf_cs = GD_UT | 3;
 ```
-El registro restante es el tf_eip, que se inicializó en la función load_icode:
+El registro restante es el `tf_eip`, que se inicializó en la función `load_icode`:
+
 ```
-    e->env_tf.tf_eip = elf->e_entry;
+e->env_tf.tf_eip = elf->e_entry;
 ```
 
-**Continuar hasta la instrucción iret, sin llegar a ejecutarla. Mostrar en este punto, de nuevo, las cinco primeras líneas de info registers en el monitor de QEMU. Explicar los cambios producidos.**
+**Continuar hasta la instrucción `iret`, sin llegar a ejecutarla. Mostrar en este punto, de nuevo, las cinco primeras líneas de `info registers` 
+en el monitor de QEMU. Explicar los cambios producidos.**
 
-Se recuerda el info registers justo al entrar a la función env_pop_tf:
+Se recuerda el info registers justo al entrar a la función `env_pop_tf`:
+
 ```
 (qemu) info registers
 EAX=003bc000 EBX=00010094 ECX=f03bc000 EDX=00000209
@@ -188,7 +180,8 @@ ES =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 ```
 
-Ahora se tiene, justo antes de ejecutar iret:
+
+Ahora se tiene, justo antes de ejecutar `iret`:
 
 ```
 => 0xf0102eeb <+19>:    iret
@@ -200,21 +193,22 @@ EIP=f0102f6f EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0023 00000000 ffffffff 00cff300 DPL=3 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 ```
-Primero se popearon los registros de propósito general (popa), obteniendo así los valores del trapframe del proceso (que eran todos ceros), después el registro es (pop es) y ds (pop ds), este último cambiando el nivel de privilegio (nótese como pasa de nivel 0 (kernel) a nivel 3 (usuario)). 
+Primero se popearon los registros de propósito general (popal), obteniendo así los valores del trapframe del proceso (que eran todos ceros), después el registro `es` (pop es) y `ds` (pop ds), 
+este último cambiando el nivel de privilegio (nótese como pasa de nivel 0 (kernel) a nivel 3 (usuario)). 
 
 El puntero al stack también cambió debido a la ejecución de instrucciones del programa, al igual que el puntero a instrucción.
 
 **Ejecutar la instrucción iret. En ese momento se ha realizado el cambio de contexto y los símbolos del kernel ya no son válidos.**
 
-    **imprimir el valor del contador de programa con p $pc o p $eip**
+**imprimir el valor del contador de programa con `p $pc` o `p $eip`**
 
 ```
 (gdb) p $pc
 $1 = (void (*)()) 0x800020
 (gdb) p $eip
 $2 = (void (*)()) 0x800020
+```
 
-```       
 **cargar los símbolos de hello con el comando add-symbol-file, volver a imprimir el valor del contador de programa**
 
 ```
@@ -226,6 +220,7 @@ $4 = (void (*)()) 0x800020 <_start>
 
 **Mostrar una última vez la salida de info registers en QEMU, y explicar los cambios producidos.**
 
+
 La última vez que se imprimió, se obtuvo:
 ```
 EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000000
@@ -234,7 +229,9 @@ EIP=f0102f6f EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0023 00000000 ffffffff 00cff300 DPL=3 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
 ```
+
 Ahora se tiene:
+
 ```
 (qemu) info registers 
 EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000000
@@ -242,14 +239,12 @@ ESI=00000000 EDI=00000000 EBP=00000000 ESP=f01c8030
 EIP=f0102f6f EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0023 00000000 ffffffff 00cff300 DPL=3 DS   [-WA]
 CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
-
-
 ```
 No hubo cambios.
 
 **Poner un breakpoint temporal (tbreak, se aplica una sola vez) en la función syscall() y explicar qué ocurre justo tras ejecutar la instrucción int $0x30. Usar, de ser necesario, el monitor de QEMU.**
+
 Int N es una excepción producida por el mismo software. En este caso, es un int 48, que es el número reservado para producir una excepción y poder ejecutar una syscall.
-...
 
 
 kern_idt
