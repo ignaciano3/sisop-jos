@@ -235,16 +235,39 @@ Ahora se tiene:
 ```
 (qemu) info registers 
 EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000000
-ESI=00000000 EDI=00000000 EBP=00000000 ESP=f01c8030
-EIP=f0102f6f EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
+ESI=00000000 EDI=00000000 EBP=00000000 ESP=eebfe000
+EIP=00800020 EFL=00000002 [-------] CPL=3 II=0 A20=1 SMM=0 HLT=0
 ES =0023 00000000 ffffffff 00cff300 DPL=3 DS   [-WA]
-CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
+CS =001b 00000000 ffffffff 00cffa00 DPL=3 CS32 [-R-]
 ```
-No hubo cambios.
+
+Se actualizaron los registros ESP, EIP, EFL y CS a los valores que especifica el Trapframe.
+Adicionalmente, el DPL del CS cambio a nivel 3.
 
 **Poner un breakpoint temporal (tbreak, se aplica una sola vez) en la función syscall() y explicar qué ocurre justo tras ejecutar la instrucción int $0x30. Usar, de ser necesario, el monitor de QEMU.**
 
 Int N es una excepción producida por el mismo software. En este caso, es un int 48, que es el número reservado para producir una excepción y poder ejecutar una syscall.
+
+
+```
+(gdb) tbreak syscall
+Temporary breakpoint 2 at 0x800a3b: syscall. (2 locations)
+(gdb) c
+Continuing.
+=> 0x800a3b <syscall+17>:	mov    0x8(%ebp),%ecx
+
+Temporary breakpoint 2, syscall (num=0, check=-289415544, a1=4005551752, a2=13, a3=0, a4=0, a5=0)
+at lib/syscall.c:23
+23		asm volatile("int %1\n"
+```
+
+```
+EAX=00000000 EBX=00000000 ECX=eebfde88 EDX=eebfde88
+ESI=00000000 EDI=00000000 EBP=eebfde40 ESP=eebfde18
+EIP=00800a3b EFL=00000096 [--S-AP-] CPL=3 II=0 A20=1 SMM=0 HLT=0
+ES =0023 00000000 ffffffff 00cff300 DPL=3 DS   [-WA]
+CS =001b 00000000 ffffffff 00cffa00 DPL=3 CS32 [-R-]
+```
 
 
 kern_idt
