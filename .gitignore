@@ -10,7 +10,7 @@
 /qemu.out
 /qemu.log
 /gradelib.pyc
-/lab?-handin.tar.gz
+/lab*-handin.tar.gz
 /lab?/
 /sol?/
 /myapi.key
@@ -18,3 +18,4 @@
 /.vscode
 /.misc.xml
 /.vsc.xml
+/.suf
