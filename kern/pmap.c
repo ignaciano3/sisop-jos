@@ -311,6 +311,8 @@ page_init(void)
 	// LAB 4:
 	// Change your code to mark the physical page at MPENTRY_PADDR
 	// as in use
+	_Static_assert(MPENTRY_PADDR % PGSIZE == 0, "MPENTRY_PADDR must be page aligned");
+
 
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
@@ -336,6 +338,12 @@ page_init(void)
 		physaddr_t phys_address = page2pa(&pages[i]);
 		if (i == 0 ||
 		    (phys_address >= IOPHYSMEM && phys_address < kernel_end)) {
+			continue;
+		}
+		// LAB 4:
+		// Change your code to mark the physical page at MPENTRY_PADDR
+		// as in use
+		if (i * PGSIZE == MPENTRY_PADDR) {
 			continue;
 		}
 		pages[i].pp_ref = 0;
