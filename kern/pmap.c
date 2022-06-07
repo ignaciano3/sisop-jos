@@ -315,7 +315,7 @@ page_init(void)
 	// Change your code to mark the physical page at MPENTRY_PADDR
 	// as in use
 	_Static_assert(MPENTRY_PADDR % PGSIZE == 0,
-	               "MPENTRY_PADDR must be page aligned");
+	               "MPENTRY_PADDR is not page-aligned");
 
 
 	// The example code here marks all physical pages as free.

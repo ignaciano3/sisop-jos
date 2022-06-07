@@ -59,7 +59,7 @@ entry:
 	movl	$(RELOC(entry_pgdir)), %eax
 	movl	%eax, %cr3
 	# Turn on large pages.
-//	movl %cr4, %eax
+	movl %cr4, %eax
 	movl $(CR4_PSE), %eax
 	movl %eax, %cr4
 	# Turn on paging.
