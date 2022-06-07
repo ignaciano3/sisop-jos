@@ -288,8 +288,11 @@ mem_init_mp(void)
 	// LAB 4: Your code here:
 	for (int i = 0; i < NCPU; i++) {
 		uint32_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
-		boot_map_region(kern_pgdir, kstacktop_i - KSTKSIZE, KSTKSIZE,
-		                PADDR(percpu_kstacks[i]), PTE_W | PTE_P);
+		boot_map_region(kern_pgdir,
+		                kstacktop_i - KSTKSIZE,
+		                KSTKSIZE,
+		                PADDR(percpu_kstacks[i]),
+		                PTE_W | PTE_P);
 	}
 }
 
@@ -311,7 +314,8 @@ page_init(void)
 	// LAB 4:
 	// Change your code to mark the physical page at MPENTRY_PADDR
 	// as in use
-	_Static_assert(MPENTRY_PADDR % PGSIZE == 0, "MPENTRY_PADDR must be page aligned");
+	_Static_assert(MPENTRY_PADDR % PGSIZE == 0,
+	               "MPENTRY_PADDR must be page aligned");
 
 
 	// The example code here marks all physical pages as free.
@@ -648,7 +652,17 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	// panic("mmio_map_region not implemented");
+	size = ROUNDUP(size, PGSIZE);
+	if (base + size > MMIOLIM) {
+		panic("mmio_map_region: MMIOLIM overflow");
+	}
+	boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT | PTE_W);
+	// Update base for the next region.
+	void *base_reserved_region = (void *) base;
+	base += size;
+
+	return base_reserved_region;
 }
 
 static uintptr_t user_mem_check_addr;
