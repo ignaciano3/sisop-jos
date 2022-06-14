@@ -4,7 +4,7 @@
 
 void
 write(uint16_t *addr, uint16_t value)
-{
+{	
 	int r;
 
 	if ((r = sys_page_alloc(0, addr, PTE_P|PTE_U|PTE_W)) < 0)

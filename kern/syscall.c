@@ -91,8 +91,7 @@ sys_exofork(void)
 	if (aux < 0)
 		return aux;
 	env->env_status = ENV_NOT_RUNNABLE;
-	env->env_tf = curenv->env_tf;
-	//memcpy((void*)&env->env_tf, &curenv->env_tf, sizeof(env->env_tf));
+	memcpy((void*)&env->env_tf, &curenv->env_tf, sizeof(env->env_tf));
 	env->env_tf.tf_regs.reg_eax = 0;
 	return env->env_id;
 }
@@ -168,15 +167,16 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   allocated!
 
 	// LAB 4: Your code here.
-	if ((perm & (PTE_U | PTE_P)) == 0) {
+	if (!(perm & (PTE_U | PTE_P))) {
 		return -E_INVAL;
 	}
-	if (~(perm | (PTE_AVAIL | PTE_W)) > 0) { //other bits are set
+	if (perm & ~(PTE_U | PTE_P | PTE_AVAIL | PTE_W)) { //other bits are set
 		return -E_INVAL;		
 	} 
 
-	if (((uint32_t)va >= UTOP) || ((uint32_t)va % PGSIZE != 0))
+	if (((uint32_t)va >= UTOP) || ((uint32_t)va % PGSIZE != 0)) {
 		return -E_INVAL;
+	}
 
 	struct PageInfo* pg = page_alloc(ALLOC_ZERO);
 	if (!pg) {
@@ -224,10 +224,10 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	if ((perm & (PTE_U | PTE_P)) == 0) {
+	if (!(perm & (PTE_U | PTE_P))) {
 		return -E_INVAL;
 	}
-	if (~(perm | (PTE_AVAIL | PTE_W)) > 0) { //other bits are set
+	if (perm & ~(PTE_U | PTE_P | PTE_AVAIL | PTE_W)) { //other bits are set
 		return -E_INVAL;		
 	} 
 
@@ -240,22 +240,27 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
         return -E_BAD_ENV;
     }
 
-	if (((uint32_t)srcva >= UTOP) || ((uint32_t)srcva % PGSIZE != 0))
+	if (((uint32_t)srcva >= UTOP) || ((uint32_t)srcva % PGSIZE != 0)) {
 		return -E_INVAL;
-	if (((uint32_t)dstva >= UTOP) || ((uint32_t)dstva % PGSIZE != 0))
+	}
+	if (((uint32_t)dstva >= UTOP) || ((uint32_t)dstva % PGSIZE != 0)) {
 		return -E_INVAL;
+	}
 
 
-	pte_t* pt;
-	struct PageInfo* pg = page_lookup(src->env_pgdir, srcva, &pt);
-	if (!pg)
+	pte_t* pte;
+	struct PageInfo* pg = page_lookup(src->env_pgdir, srcva, &pte);
+	if (!pg) {
 		return -E_INVAL;
+	}
 
-	if (!(*(pt + PTX(srcva)) & PTE_W) && (perm & PTE_W)) 
-	 return -E_INVAL;
+	if (!(*pte & PTE_W) && (perm & PTE_W)) {
+	    return -E_INVAL;
+	}
 	
-	if (page_insert(dst->env_pgdir, pg, dstva, perm) < 0) 
+	if (page_insert(dst->env_pgdir, pg, dstva, perm) < 0) {
 		return -E_NO_MEM;
+	}
 	
 	return 0;
 }
@@ -374,15 +379,15 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	case SYS_yield:
 		sys_yield();
 	case SYS_exofork:
-		sys_exofork();
+		return sys_exofork();
 	case SYS_env_set_status:
-		sys_env_set_status((envid_t) a1, a2);
+		return sys_env_set_status((envid_t) a1, a2);
 	case SYS_page_alloc:
-		sys_page_alloc((envid_t) a1, (void*) a2, a3);
+		return sys_page_alloc((envid_t) a1, (void*) a2, a3);
 	case SYS_page_map:
-		sys_page_map((envid_t) a1, (void*) a2, (envid_t) a3, (void*) a4, a5);
+		return sys_page_map((envid_t) a1, (void*) a2, (envid_t) a3, (void*) a4, a5);
 	case SYS_page_unmap:
-		sys_page_unmap((envid_t) a1, (void*) a2);
+		return sys_page_unmap((envid_t) a1, (void*) a2);
 	default:
 		return -E_INVAL;
 	}
