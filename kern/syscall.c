@@ -91,7 +91,6 @@ sys_exofork(void)
 	if (aux < 0)
 		return aux;
 	env->env_status = ENV_NOT_RUNNABLE;
-	//env->env_tf = curenv->env_tf;
 	memcpy((void*)&env->env_tf, &curenv->env_tf, sizeof(env->env_tf));
 	env->env_tf.tf_regs.reg_eax = 0;
 	return env->env_id;
