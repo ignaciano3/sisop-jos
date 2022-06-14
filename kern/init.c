@@ -73,10 +73,6 @@ i386_init(void)
 	ENV_CREATE(user_hello, ENV_TYPE_USER);
 #endif  // TEST*
 
-	// Eliminar esta llamada una vez completada la parte 1
-	// e implementado sched_yield().
-	//env_run(&envs[0]);
-
 	// Schedule and run the first user environment!
 	sched_yield();
 }
@@ -132,10 +128,7 @@ mp_main(void)
 	//
 	// Your code here:
 	lock_kernel();
-
-	// Remove this after you finish Exercise 4
-	for (;;)
-		;
+	sched_yield();
 }
 
 /*

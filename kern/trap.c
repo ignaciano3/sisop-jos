@@ -144,7 +144,7 @@ trap_init_percpu(void)
 	int id = cpunum();
 	struct CpuInfo *cpu = &cpus[id];
 	struct Taskstate *ts = &cpu->cpu_ts;
-	
+
 	uint16_t idx = (GD_TSS0 >> 3) + id;
 	uint16_t seg = idx << 3;
 	// Setup a TSS so that we get the right stack
@@ -156,7 +156,7 @@ trap_init_percpu(void)
 
 	// Initialize the TSS slot of the gdt.
 	gdt[idx] =
-	        SEG16(STS_T32A, (uint32_t)(&ts), sizeof(struct Taskstate) - 1, 0);
+	        SEG16(STS_T32A, (uint32_t)(ts), sizeof(struct Taskstate) - 1, 0);
 	gdt[idx].sd_s = 0;
 
 	// Load the TSS selector (like other segment selectors, the

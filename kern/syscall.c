@@ -86,12 +86,12 @@ sys_exofork(void)
 	// will appear to return 0.
 
 	// LAB 4: Your code here.
-	struct Env* env;
+	struct Env *env;
 	int aux = env_alloc(&env, curenv->env_id);
 	if (aux < 0)
 		return aux;
 	env->env_status = ENV_NOT_RUNNABLE;
-	memcpy((void*)&env->env_tf, &curenv->env_tf, sizeof(env->env_tf));
+	memcpy((void *) &env->env_tf, &curenv->env_tf, sizeof(env->env_tf));
 	env->env_tf.tf_regs.reg_eax = 0;
 	return env->env_id;
 }
@@ -114,15 +114,15 @@ sys_env_set_status(envid_t envid, int status)
 
 	// LAB 4: Your code here.
 	if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE)
-        return -E_INVAL;
+		return -E_INVAL;
 
-    struct Env *env;
+	struct Env *env;
 
-    if (envid2env(envid, &env, 1) < 0)
-        return -E_BAD_ENV;
+	if (envid2env(envid, &env, 1) < 0)
+		return -E_BAD_ENV;
 
-    env->env_status = status;
-    return 0;
+	env->env_status = status;
+	return 0;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -170,24 +170,24 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	if (!(perm & (PTE_U | PTE_P))) {
 		return -E_INVAL;
 	}
-	if (perm & ~(PTE_U | PTE_P | PTE_AVAIL | PTE_W)) { //other bits are set
-		return -E_INVAL;		
-	} 
-
-	if (((uint32_t)va >= UTOP) || ((uint32_t)va % PGSIZE != 0)) {
+	if (perm & ~(PTE_U | PTE_P | PTE_AVAIL | PTE_W)) {  // other bits are set
 		return -E_INVAL;
 	}
 
-	struct PageInfo* pg = page_alloc(ALLOC_ZERO);
+	if (((uint32_t) va >= UTOP) || ((uint32_t) va % PGSIZE != 0)) {
+		return -E_INVAL;
+	}
+
+	struct PageInfo *pg = page_alloc(ALLOC_ZERO);
 	if (!pg) {
 		return -E_NO_MEM;
 	}
 
-    struct Env *env;
+	struct Env *env;
 
-    if (envid2env(envid, &env, 1) < 0) {
-        return -E_BAD_ENV;
-    }
+	if (envid2env(envid, &env, 1) < 0) {
+		return -E_BAD_ENV;
+	}
 
 	if (page_insert(env->env_pgdir, pg, va, perm) < 0) {
 		page_free(pg);
@@ -227,41 +227,41 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 	if (!(perm & (PTE_U | PTE_P))) {
 		return -E_INVAL;
 	}
-	if (perm & ~(PTE_U | PTE_P | PTE_AVAIL | PTE_W)) { //other bits are set
-		return -E_INVAL;		
-	} 
+	if (perm & ~(PTE_U | PTE_P | PTE_AVAIL | PTE_W)) {  // other bits are set
+		return -E_INVAL;
+	}
 
-	struct Env* src;
-	struct Env* dst;
+	struct Env *src;
+	struct Env *dst;
 	if (envid2env(srcenvid, &src, 1) < 0) {
-        return -E_BAD_ENV;
+		return -E_BAD_ENV;
 	}
-    if (envid2env(dstenvid, &dst, 1) < 0) {
-        return -E_BAD_ENV;
-    }
+	if (envid2env(dstenvid, &dst, 1) < 0) {
+		return -E_BAD_ENV;
+	}
 
-	if (((uint32_t)srcva >= UTOP) || ((uint32_t)srcva % PGSIZE != 0)) {
+	if (((uint32_t) srcva >= UTOP) || ((uint32_t) srcva % PGSIZE != 0)) {
 		return -E_INVAL;
 	}
-	if (((uint32_t)dstva >= UTOP) || ((uint32_t)dstva % PGSIZE != 0)) {
+	if (((uint32_t) dstva >= UTOP) || ((uint32_t) dstva % PGSIZE != 0)) {
 		return -E_INVAL;
 	}
 
 
-	pte_t* pte;
-	struct PageInfo* pg = page_lookup(src->env_pgdir, srcva, &pte);
+	pte_t *pte;
+	struct PageInfo *pg = page_lookup(src->env_pgdir, srcva, &pte);
 	if (!pg) {
 		return -E_INVAL;
 	}
 
 	if (!(*pte & PTE_W) && (perm & PTE_W)) {
-	    return -E_INVAL;
+		return -E_INVAL;
 	}
-	
+
 	if (page_insert(dst->env_pgdir, pg, dstva, perm) < 0) {
 		return -E_NO_MEM;
 	}
-	
+
 	return 0;
 }
 
@@ -278,18 +278,18 @@ sys_page_unmap(envid_t envid, void *va)
 	// Hint: This function is a wrapper around page_remove().
 
 	// LAB 4: Your code here.
-    if ((uint32_t)va >= UTOP || (uint32_t)va % PGSIZE != 0) {
-    	return -E_INVAL;
-    }
+	if ((uint32_t) va >= UTOP || (uint32_t) va % PGSIZE != 0) {
+		return -E_INVAL;
+	}
 
 	struct Env *env;
 
-    if (envid2env(envid, &env, 1) < 0) {
-        return -E_BAD_ENV;
-    }
+	if (envid2env(envid, &env, 1) < 0) {
+		return -E_BAD_ENV;
+	}
 
-    page_remove(env->env_pgdir, va);
-    return 0;
+	page_remove(env->env_pgdir, va);
+	return 0;
 }
 
 // Try to send 'value' to the target env 'envid'.
@@ -383,11 +383,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	case SYS_env_set_status:
 		return sys_env_set_status((envid_t) a1, a2);
 	case SYS_page_alloc:
-		return sys_page_alloc((envid_t) a1, (void*) a2, a3);
+		return sys_page_alloc((envid_t) a1, (void *) a2, a3);
 	case SYS_page_map:
-		return sys_page_map((envid_t) a1, (void*) a2, (envid_t) a3, (void*) a4, a5);
+		return sys_page_map(
+		        (envid_t) a1, (void *) a2, (envid_t) a3, (void *) a4, a5);
 	case SYS_page_unmap:
-		return sys_page_unmap((envid_t) a1, (void*) a2);
+		return sys_page_unmap((envid_t) a1, (void *) a2);
 	default:
 		return -E_INVAL;
 	}
