@@ -70,6 +70,12 @@ envid_t dumbfork(void) {
         // uvtp = VA of "virtual page table"
         // uvpd = VA of current page directory
         readonly = !((uvpd[PDX(va)] & PTE_W) && (uvpt[PGNUM(va)] & PTE_W));
+        pde_t pde = uvpd[PDX(addr)];
+		if (pde & PTE_P) {
+			pte_t pte = uvpt[PGNUM(addr)];
+			if (pte & PTE_P) {
+				readonly = !(pte & PTE_W);
+			}
         duppage(envid, addr, readonly);
     }
 ```
