@@ -53,17 +53,17 @@ duppage(envid_t envid, unsigned pn)
 {
 	/*int r;
 	if ((r = sys_page_alloc(dstenv, addr, PTE_P|PTE_U|PTE_W)) < 0) {
-		panic("sys_page_alloc: %e", r);
-		return r;
+	        panic("sys_page_alloc: %e", r);
+	        return r;
 	}
 	if ((r = sys_page_map(dstenv, addr, 0, UTEMP, PTE_P|PTE_U|PTE_W)) < 0) {
-		panic("sys_page_map: %e", r);
-		return r;
+	        panic("sys_page_map: %e", r);
+	        return r;
 	}
 	memmove(UTEMP, addr, PGSIZE);
 	if ((r = sys_page_unmap(0, UTEMP)) < 0) {
-		panic("sys_page_unmap: %e", r);
-		return r;
+	        panic("sys_page_unmap: %e", r);
+	        return r;
 	}*/
 	return 0;
 }
@@ -72,8 +72,8 @@ static void
 dup_or_share(envid_t dstenv, void *addr, int perm)
 {
 	/*if (!(perm & PTE_W)) { //Page is read-only
-		if ((r = sys_page_map(0, addr, dstenv, UTEMP, perm)) < 0)
-			panic("sys_page_map: %e", r);
+	        if ((r = sys_page_map(0, addr, dstenv, UTEMP, perm)) < 0)
+	                panic("sys_page_map: %e", r);
 	}
 
 	duppage(envid, addr);
@@ -106,12 +106,13 @@ fork(void)
 	return -E_INVAL;
 }
 
-envid_t fork_v0(void)
+envid_t
+fork_v0(void)
 {
 	/*envid_t envid;
 	uint8_t *addr;
 	int r;
-	
+
 	// Allocate a new child environment.
 	// The kernel will initialize it with a copy of our register state,
 	// so that the child will appear to have called sys_exofork() too -
@@ -119,23 +120,23 @@ envid_t fork_v0(void)
 	// will return 0 instead of the envid of the child.
 	envid = sys_exofork();
 	if (envid < 0)
-		panic("sys_exofork: %e", envid);
+	        panic("sys_exofork: %e", envid);
 	if (envid == 0) {
-		// We're the child.
-		// The copied value of the global variable 'thisenv'
-		// is no longer valid (it refers to the parent!).
-		// Fix it and return 0.
-		thisenv = &envs[ENVX(sys_getenvid())];
-		return 0;
+	        // We're the child.
+	        // The copied value of the global variable 'thisenv'
+	        // is no longer valid (it refers to the parent!).
+	        // Fix it and return 0.
+	        thisenv = &envs[ENVX(sys_getenvid())];
+	        return 0;
 	}
 	// We're the parent.
 	// Eagerly copy our entire address space into the child.
 	// This is NOT what you should do in your fork implementation.
 	for (addr = 0; addr < UTOP; addr += PGSIZE) {
-		//if mapped
-		//obtain permissions
-		//int perm = obtained_permissions & PTE_SYSCALL
-		dup_or_share(envid, addr, perm);
+	        //if mapped
+	        //obtain permissions
+	        //int perm = obtained_permissions & PTE_SYSCALL
+	        dup_or_share(envid, addr, perm);
 	}
 
 	// Also copy the stack we are currently running on.
@@ -143,7 +144,7 @@ envid_t fork_v0(void)
 
 	// Start the child environment running
 	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0)
-		panic("sys_env_set_status: %e", r);
+	        panic("sys_env_set_status: %e", r);
 
 	return envid;*/
 	return 0;

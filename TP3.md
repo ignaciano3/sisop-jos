@@ -46,31 +46,41 @@ Se muestra como se crean 3 procesos, con id 0x1000, 0x1001 y 0x1002, ejecutandos
 dumbfork
 --------
 
-1. Si una página no es modificable en el padre ¿lo es en el hijo? En otras palabras: ¿se preserva, en el hijo, el flag de solo-lectura en las páginas copiadas?
+**1. Si una página no es modificable en el padre ¿lo es en el hijo? En otras palabras: 
+¿se preserva, en el hijo, el flag de solo-lectura en las páginas copiadas?**
 
-No, todas las páginas alocadas en el proceso hijo están hechas desde la función duppage, y viendo el código:
-```
-(r = sys_page_alloc(dstenv, addr, PTE_P|PTE_U|PTE_W))
-```
-Todas las páginas alocadas tienen el flag de escritura, sin importar los permisos en el padre.
+No, todas las páginas allocadas en el proceso hijo están hechas desde la función `duppage()`, y viendo el código:
 
-2. Mostrar, con código en espacio de usuario, cómo podría dumbfork() verificar si una dirección en el padre es de solo lectura, de tal manera que pudiera pasar como tercer parámetro a duppage() un booleano llamado readonly que indicase si la página es modificable o no:
-
+```C
+r = sys_page_alloc(dstenv, addr, PTE_P|PTE_U|PTE_W)
 ```
+
+Todas las páginas allocadas tienen el flag de escritura, sin importar los permisos en el padre.
+
+**2. Mostrar, con código en espacio de usuario, cómo podría `dumbfork()` verificar si una dirección en el padre es de solo lectura,
+de tal manera que pudiera pasar como tercer parámetro a `duppage()` un booleano llamado readonly que indicase si la página es modificable o no:**
+
+_Ayuda_: usar las variables globales `uvpd` y/o `uvpt`.
+
+```C
 envid_t dumbfork(void) {
     // ...
     for (addr = UTEXT; addr < end; addr += PGSIZE) {
         bool readonly;
-        //
-        // TAREA: dar valor a la variable readonly
-        //
-        
+        // uvtp = VA of "virtual page table"
+        // uvpd = VA of current page directory
+        readonly = !((uvpd[PDX(va)] & PTE_W) && (uvpt[PGNUM(va)] & PTE_W));
         duppage(envid, addr, readonly);
     }
 ```
-3. Supongamos que se desea actualizar el código de duppage() para tener en cuenta el argumento readonly: si este es verdadero, la página copiada no debe ser modificable en el hijo. Se pide mostrar una versión en el que se implemente la misma funcionalidad readonly, pero sin usar en ningún caso más de tres llamadas al sistema.
 
-```
+**3. Supongamos que se desea actualizar el código de `duppage()` para tener en cuenta el argumento _readonly_: si este es verdadero,
+la página copiada no debe ser modificable en el hijo. Se pide mostrar una versión en el que se implemente la misma funcionalidad readonly,
+pero sin usar en ningún caso más de tres llamadas al sistema.**
+
+_Ayuda_: Leer con atención la documentación de `sys_page_map()` en _kern/syscall.c_, en particular donde avisa que se devuelve error:
+
+```C
 void duppage(envid_t dstenv, void *addr, bool readonly) {
     int flag_write = readonly ? 0 : PTE_W;
     int r;
@@ -84,7 +94,6 @@ void duppage(envid_t dstenv, void *addr, bool readonly) {
 		panic("sys_page_unmap: %e", r);
 }
 ```
-...
 
 
 ipc_recv
