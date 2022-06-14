@@ -188,6 +188,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	if (envid2env(envid, &env, 1) < 0) {
 		return -E_BAD_ENV;
 	}
+
 	if (page_insert(env->env_pgdir, pg, va, perm) < 0) {
 		page_free(pg);
 		return -E_NO_MEM;
