@@ -105,7 +105,34 @@ void duppage(envid_t dstenv, void *addr, bool readonly) {
 ipc_recv
 --------
 
-...
+**Un proceso podría intentar enviar el valor númerico `-E_INVAL` vía `ipc_send()`. 
+¿Cómo es posible distinguir si es un error, o no?**
+
+```C
+envid_t src = -1;
+int r = ipc_recv(&src, 0, NULL);
+
+if (r < 0)
+  if (/* ??? */)
+    puts("Hubo error.");
+  else
+    puts("Valor negativo correcto.")
+```
+
+En la documentación de `ipc_recv()` se observa que _"If the system call fails, then store 0 in *fromenv and *perm (if
+they're nonnull) and return the error."_. Por lo tanto con revisar el valor de src, se puede determinar si se produjo un error.
+
+```C
+envid_t src = -1;
+int r = ipc_recv(&src, 0, NULL);
+
+if (r < 0)
+  if (src == 0)
+    puts("Hubo error.");
+  else
+    puts("Valor negativo correcto.")
+```
+
 
 
 sys_ipc_try_send
