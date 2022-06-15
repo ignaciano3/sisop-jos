@@ -344,7 +344,8 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	if (!dstenv->env_ipc_recving) {
 		return -E_IPC_NOT_RECV;
 	}
-	if ((unsigned int) srcva < UTOP && (unsigned int) dstenv->env_ipc_dstva < UTOP) {
+	if ((unsigned int) srcva < UTOP &&
+	    (unsigned int) dstenv->env_ipc_dstva < UTOP) {
 		pte_t *pte;
 		// check if srcva is page-aligned
 		if (((uint32_t) srcva % PGSIZE != 0)) {
@@ -360,7 +361,10 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 			return -E_INVAL;
 		}
 		// check if there's enough memory to map srcva in envid's address space
-		if (page_insert(dstenv->env_pgdir, pg, dstenv->env_ipc_dstva, (int) perm) < 0) {
+		if (page_insert(dstenv->env_pgdir,
+		                pg,
+		                dstenv->env_ipc_dstva,
+		                (int) perm) < 0) {
 			return -E_NO_MEM;
 		}
 		// env_ipc_perm is set to 'perm' if a page was transferred, 0 otherwise
