@@ -372,7 +372,42 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+	if (curenv->env_pgfault_upcall) {
+		struct UTrapframe *u;
 
+		// Recursive case, we have to leave
+		// an extra word between the current top of the exception stack and
+		// the new stack frame because the exception stack _is_ the trap-time stack.
+		if ((tf->tf_esp < UXSTACKTOP) &&
+		    (tf->tf_esp >= UXSTACKTOP - PGSIZE)) {
+			u = (struct UTrapframe *) (tf->tf_esp - 4 -
+			                           sizeof(struct UTrapframe));
+			user_mem_assert(curenv,
+			                (void *) u,
+			                sizeof(struct UTrapframe) + 4,
+			                PTE_W | PTE_P);
+			// Non-recursive case, we can use the space at the top of the trap-time stack
+		} else {
+			u = (struct UTrapframe *) (UXSTACKTOP -
+			                           sizeof(struct UTrapframe));
+			user_mem_assert(curenv,
+			                (void *) u,
+			                sizeof(struct UTrapframe),
+			                PTE_W | PTE_P);
+		}
+
+		u->utf_fault_va = fault_va;
+		u->utf_err = tf->tf_err;
+		u->utf_regs = tf->tf_regs;
+		u->utf_eflags = tf->tf_eflags;
+		u->utf_eip = tf->tf_eip;
+		u->utf_esp = tf->tf_esp;
+
+		curenv->env_tf.tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
+		curenv->env_tf.tf_esp = (uintptr_t) u;
+
+		env_run(curenv);
+	}
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 	        curenv->env_id,
