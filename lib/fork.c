@@ -66,7 +66,7 @@ duppage(envid_t envid, void *va, int perm)
 }
 
 static void
-dup_or_share(envid_t dstenv, void *addr, int perm)
+dup_or_share(envid_t dstenv, void *va, int perm)
 {
 	int r;
 	if (!(perm & PTE_P) || !(perm & PTE_U)) {
@@ -74,10 +74,10 @@ dup_or_share(envid_t dstenv, void *addr, int perm)
 	}
 	// Page is read-only
 	if (!(perm & PTE_W)) {
-		if ((r = sys_page_map(0, addr, dstenv, UTEMP, perm)) < 0)
+		if ((r = sys_page_map(0, va, dstenv, UTEMP, perm)) < 0)
 			panic("sys_page_map: %e", r);
 	} else {
-		if ((r = duppage(dstenv, addr, perm)) < 0)
+		if ((r = duppage(dstenv, va, perm)) < 0)
 			panic("sys_page_map: %e", r);
 	}
 }
@@ -119,9 +119,6 @@ fork_v0(void)
 			}
 		}
 	}
-
-	// Also copy the stack we are currently running on.
-	duppage(envid, ROUNDDOWN(&addr, PGSIZE), PTE_P | PTE_U | PTE_W);
 
 	// Start the child environment running
 	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0)
