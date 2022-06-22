@@ -60,25 +60,32 @@ pgfault(struct UTrapframe *utf)
 // It is also OK to panic on error.
 //
 static int
-duppage(envid_t envid, void *va, int perm)
+duppage(envid_t envid, unsigned pn)
 {
-	int r;
-	int updatedPerms;
-	if (!(perm & PTE_W) && !(perm & PTE_COW)) {  // Page is read-only
-		updatedPerms = perm;
-	} else {  // Page is writable or copy-on-write
-		updatedPerms = (perm & (~PTE_W)) | PTE_COW;
-	}
 
-	if ((r = sys_page_map(0, va, envid, va, updatedPerms)) < 0) {
-		panic("sys_page_map: %e", r);
-	}
-	if (updatedPerms & PTE_COW) {
-		// Change parent's page perms to have PTE_COW
-		if ((r = sys_page_map(0, va, 0, va, updatedPerms)) < 0) {
+	int r;
+
+	// LAB 4: Your code here.
+	pte_t pte = uvpt[pn];
+	void* addr = (void*) (pn * PGSIZE);
+	if (pte & PTE_SHARE) {
+		if ((r = sys_page_map(0, addr, envid, addr, pte & PTE_SYSCALL)) < 0) {
+			panic("sys_page_map: %e", r);
+		}
+	// if the page is writable or copy-on-write, we need to create a copy-on-write page
+	} else if ((pte & PTE_COW) || (pte & PTE_W)) {
+		if ((r = sys_page_map(0, addr, envid, addr, PTE_P | PTE_U | PTE_COW)) < 0) {
+			panic("sys_page_map: %e", r);
+		}
+		if ((r = sys_page_map(0, addr, 0, addr, PTE_P | PTE_U | PTE_COW)) < 0) {
+			panic("sys_page_map: %e", r);
+		}
+	} else {
+		if ((r = sys_page_map(0, addr, envid, addr, PTE_U | PTE_P)) < 0) {
 			panic("sys_page_map: %e", r);
 		}
 	}
+
 	return 0;
 }
 
@@ -94,8 +101,19 @@ dup_or_share(envid_t dstenv, void *va, int perm)
 		if ((r = sys_page_map(0, va, dstenv, UTEMP, perm)) < 0)
 			panic("sys_page_map: %e", r);
 	} else {
-		if ((r = duppage(dstenv, va, perm)) < 0)
+		if ((r = sys_page_alloc(dstenv, va, perm)) < 0) {
+			panic("sys_page_alloc: %e", r);
+		}
+
+		if ((r = sys_page_map(dstenv, va, 0, UTEMP, perm)) < 0) {
 			panic("sys_page_map: %e", r);
+		}
+
+		memmove(UTEMP, va, PGSIZE);
+
+		if ((r = sys_page_unmap(0, UTEMP)) < 0) {
+			panic("sys_page_unmap: %e", r);
+		}
 	}
 }
 
@@ -188,7 +206,7 @@ fork(void)
 		if (pde & PTE_P) {
 			pte_t pte = uvpt[PGNUM(addr)];
 			if (pte & PTE_P) {
-				duppage(envid, addr, (int) pte & PTE_SYSCALL);
+				duppage(envid, PGNUM(addr));
 			}
 		}
 	}
@@ -219,5 +237,4 @@ int
 sfork(void)
 {
 	panic("sfork not implemented");
-	return -E_INVAL;
 }
