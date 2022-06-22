@@ -25,18 +25,12 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
-	if (!(err & FEC_WR)) {
-		panic("PageFault was not caused by a write");
-	}
-	if (!(err & FEC_PR)) {
-		panic("Faulting address is not mapped");
+	pte_t pte = uvpt[PGNUM(addr)];
+
+	if (!(err & FEC_WR) || !(pte & PTE_COW)) {
+		panic("PageFault was not caused by a write or copy-on-write");
 	}
 
-	pde_t pde = uvpd[PDX(addr)];
-	pte_t pte = uvpt[PGNUM(addr)];
-	if (!(pte & PTE_COW)) {
-		panic("Tried to write to a read-only page");
-	}
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
@@ -44,6 +38,7 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 
 	// LAB 4: Your code here.
+	addr = ROUNDDOWN(addr, PGSIZE);
 	if ((r = sys_page_alloc(0, PFTEMP, PTE_P | PTE_U | PTE_W)) < 0)
 		panic("sys_page_alloc: %e", r);
 	memmove(PFTEMP, addr, PGSIZE);
@@ -170,35 +165,20 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	// LAB 4: Your code here.
+	int r;
 	envid_t envid;
 	uint8_t *addr;
-	int r;
-	extern void (*_pgfault_handler)(struct UTrapframe * utf);
 
 	// Set pgfault handler for the parent
 	set_pgfault_handler(pgfault);
-
-	// Allocate a new child environment.
-	// The kernel will initialize it with a copy of our register state,
-	// so that the child will appear to have called sys_exofork() too -
-	// except that in the child, this "fake" call to sys_exofork()
-	// will return 0 instead of the envid of the child.
 	envid = sys_exofork();
 	if (envid < 0)
 		panic("sys_exofork: %e", envid);
 	if (envid == 0) {
-		// We're the child.
-		// The copied value of the global variable 'thisenv'
-		// is no longer valid (it refers to the parent!).
-		// Fix it and return 0.
 		thisenv = &envs[ENVX(sys_getenvid())];
-		// Global variable _pgfault_handler is set thanks to the parent.
-		// Reset it and then set pgfault handler for the child
-		_pgfault_handler = 0;
-		set_pgfault_handler(pgfault);
 		return 0;
 	}
+
 	// We're the parent.
 	for (addr = 0; (unsigned int) addr < UTOP; addr += PGSIZE) {
 		if ((unsigned int) addr == (UXSTACKTOP - PGSIZE))
@@ -213,9 +193,23 @@ fork(void)
 		}
 	}
 
-	// Start the child environment running
-	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0)
+	// create exception stack for child env
+	if ((r = sys_page_alloc(envid,
+	                        (void *) (UXSTACKTOP - PGSIZE),
+	                        PTE_P | PTE_U | PTE_W)) < 0) {
+		panic("sys_page_alloc: %e", r);
+	}
+
+	// set child page fault handler
+	if ((r = sys_env_set_pgfault_upcall(envid, thisenv->env_pgfault_upcall)) <
+	    0) {
+		panic("sys_env_set_pgfault_upcall: %e", r);
+	}
+
+	// set child status as runnable
+	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0) {
 		panic("sys_env_set_status: %e", r);
+	}
 
 	return envid;
 }
