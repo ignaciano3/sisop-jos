@@ -137,5 +137,45 @@ if (r < 0)
 sys_ipc_try_send
 ----------------
 
+Para que la función sys_ipc_send() sea bloqueante, se propone el siguiente modelo:
+```
+struct Env {
+//...
+  bool env_ipc_recving;    // Env is blocked receiving
+  void *env_ipc_dstva;     // VA at which to map received page
+  uint32_t env_ipc_value;  // Data value sent to us
+  envid_t env_ipc_from;    // envid of the sender
+  int env_ipc_perm;        // Perm of page mapping received
+  envid_t senders_queue[10];   // Vector that has the ids of the processes that are attempting to send.
+  int next_sender_pos;   //Number that stores the position of the next process to be received.
+  bool sender_added_to_queue; //Boolean that states if a sender id was added to queue
+}
+```
+Se propone que con el vector de ids y la posición actual, se puede hacer que sys_ipc_send() puede ser bloqueante.
+Primero se analiza el caso 'feliz' en el que el proceso A llama a sys_ipc_recv() y se detiene a esperar a que algún otro proceso le envíe algo. Cuando el proceso B le intente enviar el mensaje, va a actuar de la misma forma que ya está implementada: ve que el proceso A está esperando el mensaje y le setea los campos correspondientemente (sin tener que hacer uso del vector de ids ni de la posición de dicho vector).
+
+Ahora, el otro caso es que el proceso B envía un mensaje al proceso A, cuando el proceso A todavía no está recibiéndolo. Se aclara que cuando se crea un proceso, el vector de ids senders_queue tiene todas las posiciones inicializadas en -1, next_sender_pos en cero, y el booleano sender_added_to_queue en false. Ahora, en la situación dada se sigue la siguiente secuencia: como el proceso A no está esperando, cuando el proceso B llama sys_ipc_send(), lo que hace al darse cuenta de que el proceso A no está bloqueado recibiendo nada, es guardarse su mismo id en el vector (en la posición next_sender_pos), aumenta en 1 el next_sender_pos, y le setea el booleano sender_added_to_queue a true. Por último procede a ponerse en ENV_NOT_RUNNABLE y llama a sched_yield(). Ahora, cuando el proceso A llame a sys_ipc_recv(), va a verificar si el booleano es true. Si este es el caso, significa que otro proceso (el B) le intentó mandar mensaje, por lo que busca el id de la primera posición después del último -1 y antes del next_sender_pos en el vector senders_queue. 'Despierta' al proceso B (poniéndolo en ENV_RUNNABLE), se pone a sí mismo en ENV_NOT_RUNNABLE y llama sched_yield() para que el proceso B haga la secuencia que ya está implementada. Además, antes de llamar a sched_yield() el proceso A modifica la posición senders_queue de dónde sacó el envid, seteándola a -1.
+
+Digamos ahora el caso en el que el proceso B y C le envían algo al proceso A, sin que A esté recibiendolo. Esto es, el proceso B hace un send, después el proceso C hace un send, y por último el proceso A hace un receive. El send del B se maneja de la misma forma que se explicó antes, al igual que el proceso C. Esto significa que cuando el proceso A llame a receive, va a encontrar lo siguiente: 
+```
+senders_queue[10] == {envid_B, envid_C, -1, -1, ...}
+next_sender_pos == 2
+sender_added_to_queue == true;
+```
+Siguiendo los pasos de antes, como sender_added_to_queue == true se busca la primera posición distinta de -1 que esté antes de la posición next_sender_pos. Imaginándose un vector cíclico en el que la última posición viene antes que la primera, entonces el id escogido es el envid_B. Por lo tanto, se hace la secuencia de antes  para que el proceso B pueda concretar el envío del mensaje y a su vez se modifica el vector senders_queue acorde, quedando {-1, envid_C, -1, -1, ...}. Cuando el proceso A vuelva a hacer un recieve, se siguen los mismos pasos. 
+
+Si el next_sender_pos llega a ser igual a 10, se setea para que sea igual a cero.
+
+
+* ¿existe posibilidad de deadlock?
+
+No existe posibilidad de un deadlock ya que en todos los pasos descritos, cada vez que se 'lockea' el mutex, se hace un unlock ya sea porque el send/recv terminó o porque se llamó a sched_yield.
+
+* ¿funciona que varios procesos (A₁, A₂, …) puedan enviar a B, y quedar cada uno bloqueado mientras B no consuma su mensaje? ¿en qué orden despertarían?
+
+Se mostró que esta posible implementación permite que varios procesos le puedan enviar a B, recibiendo así los mensajes según el orden en el que se intentaron enviar.
+
+Se observa que es propenso a errores, ya que por ejemplo si más de 10 procesos intentan enviarle un mensaje al mismo proceso sin que este los consuma, se comienza a perder rastro de procesos que intentaron hacer el send. 
+
 ...
 
