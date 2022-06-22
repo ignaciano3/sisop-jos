@@ -175,7 +175,7 @@ No existe posibilidad de un deadlock ya que en todos los pasos descritos, cada v
 
 Se mostró que esta posible implementación permite que varios procesos le puedan enviar a B, recibiendo así los mensajes según el orden en el que se intentaron enviar.
 
-Se observa que es propenso a errores, ya que por ejemplo si más de 10 procesos intentan enviarle un mensaje al mismo proceso sin que este los consuma, se comienza a perder rastro de procesos que intentaron hacer el send. 
+Se observa que es propenso a errores, ya que por ejemplo si más de 10 procesos intentan enviarle un mensaje al mismo proceso sin que este los consuma, se comienza a perder rastro de procesos que intentaron hacer el send. Para remediar esto se puede modificar el número mágico 10 a uno más grande, o en caso de poder usar memoria dinámica usarla. 
 
 ...
 
