@@ -62,25 +62,27 @@ pgfault(struct UTrapframe *utf)
 static int
 duppage(envid_t envid, unsigned pn)
 {
-
 	int r;
 
 	// LAB 4: Your code here.
 	pte_t pte = uvpt[pn];
-	void* addr = (void*) (pn * PGSIZE);
-	if (pte & PTE_SHARE) {
-		if ((r = sys_page_map(0, addr, envid, addr, pte & PTE_SYSCALL)) < 0) {
+	void *addr = (void *) (pn * PGSIZE);
+	// if the page is writable or copy-on-write, we need to create a
+	// copy-on-write page on the child and then mark our page
+	// copy-on-write
+	if ((pte & PTE_COW) || (pte & PTE_W)) {
+		// Child
+		if ((r = sys_page_map(
+		             0, addr, envid, addr, PTE_P | PTE_U | PTE_COW)) < 0) {
 			panic("sys_page_map: %e", r);
 		}
-	// if the page is writable or copy-on-write, we need to create a copy-on-write page
-	} else if ((pte & PTE_COW) || (pte & PTE_W)) {
-		if ((r = sys_page_map(0, addr, envid, addr, PTE_P | PTE_U | PTE_COW)) < 0) {
-			panic("sys_page_map: %e", r);
-		}
-		if ((r = sys_page_map(0, addr, 0, addr, PTE_P | PTE_U | PTE_COW)) < 0) {
+		// Parent
+		if ((r = sys_page_map(0, addr, 0, addr, PTE_P | PTE_U | PTE_COW)) <
+		    0) {
 			panic("sys_page_map: %e", r);
 		}
 	} else {
+		// Child
 		if ((r = sys_page_map(0, addr, envid, addr, PTE_U | PTE_P)) < 0) {
 			panic("sys_page_map: %e", r);
 		}
@@ -193,17 +195,23 @@ fork(void)
 	if (envid < 0)
 		panic("sys_exofork: %e", envid);
 	if (envid == 0) {
+		// Child
 		thisenv = &envs[ENVX(sys_getenvid())];
 		return 0;
 	}
 
 	// We're the parent.
-	for (addr = 0; (unsigned int) addr < UTOP; addr += PGSIZE) {
-		if ((unsigned int) addr == (UXSTACKTOP - PGSIZE))
-			continue;  // do not map exception stack page
+	for (size_t pgdir_index = 0; pgdir_index < PDX(UTOP); pgdir_index++) {
+		pde_t pde = uvpd[pgdir_index];
+		if (!(pde & PTE_P)) {
+			continue;
+		}
+		for (size_t pt_index = 0; pt_index < NPTENTRIES; pt_index++) {
+			addr = PGADDR(pgdir_index, pt_index, 0);
+			if ((unsigned int) addr == UXSTACKTOP - PGSIZE) {
+				continue;
+			}
 
-		pde_t pde = uvpd[PDX(addr)];
-		if (pde & PTE_P) {
 			pte_t pte = uvpt[PGNUM(addr)];
 			if (pte & PTE_P) {
 				duppage(envid, PGNUM(addr));
@@ -237,4 +245,5 @@ int
 sfork(void)
 {
 	panic("sfork not implemented");
+	return -E_INVAL;
 }
