@@ -67,10 +67,16 @@ duppage(envid_t envid, unsigned pn)
 	// LAB 4: Your code here.
 	pte_t pte = uvpt[pn];
 	void *addr = (void *) (pn * PGSIZE);
+
 	// if the page is writable or copy-on-write, we need to create a
 	// copy-on-write page on the child and then mark our page
 	// copy-on-write
-	if ((pte & PTE_COW) || (pte & PTE_W)) {
+	if (pte & PTE_SHARE) {
+		if ((r = sys_page_map(
+				0, addr, envid, addr, pte & PTE_SYSCALL)) < 0) {
+			panic("sys_page_map: %e", r);
+		}
+	} else if ((pte & PTE_COW) || (pte & PTE_W)) {
 		// Child
 		if ((r = sys_page_map(
 		             0, addr, envid, addr, PTE_P | PTE_U | PTE_COW)) < 0) {
