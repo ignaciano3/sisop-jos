@@ -263,7 +263,9 @@ trap_dispatch(struct Trapframe *tf)
 	// LAB 5: Your code here.
 	if (tf->tf_trapno == IRQ_KBD + IRQ_OFFSET) {
 		kbd_intr();
-	} else if (tf->tf_trapno == IRQ_SERIAL + IRQ_OFFSET) {
+	}
+
+	if (tf->tf_trapno == IRQ_SERIAL + IRQ_OFFSET) {
 		serial_intr();
 	}
 	// Unexpected trap: The user process or the kernel has a bug.

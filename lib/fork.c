@@ -72,8 +72,8 @@ duppage(envid_t envid, unsigned pn)
 	// copy-on-write page on the child and then mark our page
 	// copy-on-write
 	if (pte & PTE_SHARE) {
-		if ((r = sys_page_map(
-				0, addr, envid, addr, pte & PTE_SYSCALL)) < 0) {
+		if ((r = sys_page_map(0, addr, envid, addr, pte & PTE_SYSCALL)) <
+		    0) {
 			panic("sys_page_map: %e", r);
 		}
 	} else if ((pte & PTE_COW) || (pte & PTE_W)) {

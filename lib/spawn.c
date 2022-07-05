@@ -326,23 +326,21 @@ copy_shared_pages(envid_t child)
 	int r;
 	uint8_t *addr;
 	// We're the parent.
-	for (size_t pgdir_index = 0; pgdir_index < PDX(UTOP); pgdir_index++) {
+	for (size_t pgdir_index = 0; pgdir_index < PDX(USTACKTOP); pgdir_index++) {
 		pde_t pde = uvpd[pgdir_index];
 		if (!(pde & PTE_P)) {
 			continue;
 		}
 		for (size_t pt_index = 0; pt_index < NPTENTRIES; pt_index++) {
 			addr = PGADDR(pgdir_index, pt_index, 0);
-			if ((unsigned int) addr == UXSTACKTOP - PGSIZE) {
-				continue;
-			}
-
 			pte_t pte = uvpt[PGNUM(addr)];
-			if (pte & PTE_SHARE) {
-				if ((r = sys_page_map(
-						0, addr, child, addr, pte & PTE_SYSCALL)) < 0) {
-					panic("sys_page_map: %e", r);
-					return -1;
+			if ((pte & PTE_SHARE) && (pte & PTE_P)) {
+				if ((r = sys_page_map(0,
+				                      addr,
+				                      child,
+				                      addr,
+				                      pte & PTE_SYSCALL)) < 0) {
+					return r;
 				}
 			}
 		}
