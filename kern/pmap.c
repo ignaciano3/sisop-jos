@@ -600,7 +600,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 	for (; current_va < final_va; current_va += PGSIZE) {
 		pte_t *pte = pgdir_walk(env->env_pgdir, (void *) current_va, 0);
 		if (!pte || current_va > (void *) ULIM ||
-		    !(*pte & (perm | PTE_P))) {
+		    (*pte & (perm | PTE_P)) != (perm | PTE_P)) {
 			user_mem_check_addr = (current_va >= va)
 			                              ? (uintptr_t) current_va
 			                              : (uintptr_t) va;
