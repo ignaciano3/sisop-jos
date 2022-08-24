@@ -280,7 +280,8 @@ region_alloc(struct Env *e, void *va, size_t len)
 		struct PageInfo *page = page_alloc(ALLOC_ZERO);
 		if (!page)
 			panic("Could not allocate page");
-		page_insert(e->env_pgdir, page, va + offset, PTE_U | PTE_W | PTE_P);
+		void *result_va = ROUNDDOWN(va + offset, PGSIZE);
+		page_insert(e->env_pgdir, page, result_va, PTE_U | PTE_W | PTE_P);
 	}
 }
 
