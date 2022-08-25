@@ -27,7 +27,7 @@ pgfault(struct UTrapframe *utf)
 	// LAB 4: Your code here.
 	pte_t pte = uvpt[PGNUM(addr)];
 
-	if (!(err & FEC_WR) || !(pte & PTE_COW)) {
+	if (!(err & FEC_WR) || !(pte & PTE_COW) || !(err & FEC_PR)) {
 		panic("PageFault was not caused by a write or copy-on-write");
 	}
 
@@ -95,12 +95,10 @@ static void
 dup_or_share(envid_t dstenv, void *va, int perm)
 {
 	int r;
-	if (!(perm & PTE_P) || !(perm & PTE_U)) {
-		return;
-	}
+
 	// Page is read-only
 	if (!(perm & PTE_W)) {
-		if ((r = sys_page_map(0, va, dstenv, UTEMP, perm)) < 0)
+		if ((r = sys_page_map(0, va, dstenv, va, perm)) < 0)
 			panic("sys_page_map: %e", r);
 	} else {
 		if ((r = sys_page_alloc(dstenv, va, perm)) < 0) {

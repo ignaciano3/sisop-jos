@@ -365,6 +365,16 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		if (!(*pte & PTE_W) && (perm & PTE_W)) {
 			return -E_INVAL;
 		}
+
+		// This is from sys_page_alloc
+		if (!(perm & (PTE_U | PTE_P))) {
+			return -E_INVAL;
+		}
+
+		if (perm & ~(PTE_SYSCALL)) {
+			return -E_INVAL;
+		}
+
 		// check if there's enough memory to map srcva in envid's address space
 		if (page_insert(dstenv->env_pgdir,
 		                pg,
