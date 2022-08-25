@@ -175,7 +175,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	if (!(perm & (PTE_U | PTE_P))) {
 		return -E_INVAL;
 	}
-	if (perm & ~(PTE_U | PTE_P | PTE_AVAIL | PTE_W)) {  // other bits are set
+	if (perm & ~(PTE_SYSCALL)) {  // other bits are set
 		return -E_INVAL;
 	}
 
