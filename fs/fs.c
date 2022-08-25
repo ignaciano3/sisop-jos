@@ -69,7 +69,7 @@ alloc_block(void)
 	     block_number++) {
 		if (block_is_free(block_number)) {
 			bitmap[block_number / 32] &= ~(1 << (block_number % 32));
-			flush_block((void *) bitmap[block_number / 32]);
+			flush_block(bitmap + block_number / 32);
 			return block_number;
 		}
 	}
@@ -158,6 +158,7 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 		if (block_number < 0)
 			return -E_NO_DISK;
 		f->f_indirect = block_number;
+		memset(diskaddr(f->f_indirect), 0, BLKSIZE);
 		flush_block(diskaddr(f->f_indirect));
 	}
 	uint32_t *indirect_block = diskaddr(f->f_indirect);
@@ -188,6 +189,8 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 		if (block_number < 0)
 			return -E_NO_DISK;
 		*diskbno = block_number;
+		memset(diskaddr(*diskbno), 0, BLKSIZE);
+		flush_block(diskaddr(*diskbno));
 	}
 	*blk = diskaddr(*diskbno);
 
